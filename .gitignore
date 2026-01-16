@@ -1,0 +1,27 @@
+# --- Ambientes Virtuais ---
+venv/
+.env
+env/
+.venv/
+
+# --- Pastas de Dados e Logs ---
+# Ignora o conteúdo de data, mas mantém a estrutura
+data/raw/*.json
+data/processed/*.json
+*.log
+
+# --- Cache do Python e IA ---
+__pycache__/
+*.py[cod]
+*$py.class
+.cache/
+models/
+
+# --- IDEs e Sistema ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Selenium ---
+drivers/
