@@ -77,3 +77,23 @@ Para iniciar a coleta dos dados dos produtos, basta rodar:
 `python main.py`
 
 > Nota: Na primeira execução, o script realizará o download do modelo de linguagem (mDeBERTa) automaticamente. Certifique-se de ter espaço em disco (~500MB) e conexão com a internet. O mDeBERTa é um modelo de Inteligência Artificial treinado para entender o significado profundo de textos em diversos idiomas, inclusive o português. Ele é necessário para analisar os nomes dos produtos e decidir, de forma inteligente e sem regras manuais (fixadas no código), em qual categoria cada item se encaixa (ex: Smartphones, Acessórios ou Áudio).
+
+## 🧪 Qualidade e Testes
+
+Para garantir a integridade dos dados e a resiliência das transformações (especialmente no tratamento de valores monetários brasileiros e caracteres Unicode), o projeto possui uma suíte de testes unitários automatizados.
+
+**1. O que é testado?**
+
+- **Saneamento de Moeda**: Validação da conversão de strings (ex: R$ 1.299,50) para o tipo float (1299.5).
+
+- **Normalização Unicode**: Verificação da remoção de caracteres invisíveis (\xa0) comuns em raspagens web.
+
+- **Resiliência de Parsing**: Garantia de que entradas nulas ou inválidas não quebrem o pipeline (retorno padrão 0.0).
+
+**2. Como rodar os testes**
+
+Certifique-se de que o ambiente virtual está ativo e execute:
+
+`python -m pytest`
+
+> Esse comando é necessário, pois o `pytest` executa os testes a partir da pasta `tests` e, por padrão, não reconhece a pasta `src` no `PYTHONPATH`, impedindo a importação das funções. Por isso, é necessário utilizar `python -m` no início do comando.
