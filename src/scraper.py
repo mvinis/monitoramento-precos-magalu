@@ -1,4 +1,3 @@
-# arquivo responsável por abrir o navegador, navegar nas páginas e coletar o HTML
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -25,13 +24,14 @@ class MagaluScraper:
         self.ambiente = ambiente
         self.versao = versao
         self.tipo_coleta = "web_scraping"
-        """Configura a instância do Selenium com argumentos para evitar bloqueios."""
+
+        # Configura a instância do Selenium com argumentos para evitar bloqueios.
         self.chrome_options = Options()
         self.chrome_options.add_argument("--headless")
-        self.chrome_options.add_argument("--incognito")
+        self.chrome_options.add_argument("--incognito") # modo anônimo
         self.chrome_options.add_argument("--window-size=1920,1080")
         
-        # Oculta a flag de automação para o site não detectar o bot facilmente
+        # Oculta a flag de automação para o site não detectar o bot facilmente (se não é detectado e barrado)
         self.chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         self.chrome_options.add_experimental_option('useAutomationExtension', False)
         
@@ -42,17 +42,42 @@ class MagaluScraper:
         self.classificador = ProductClassifier()
 
     def iniciar_driver(self):
+        """Inicializa o Chrome via Selenium com gestão automática de drivers e opções de evasão."""
         servico = Service(ChromeDriverManager().install())
         self.driver = webdriver.Chrome(service=servico, options=self.chrome_options)
 
     def fechar_driver(self):
+        """Encerra a instância do navegador e libera os recursos de memória do sistema."""
         if self.driver:
             self.driver.quit()
 
     def coletar_produtos(self, max_paginas=None):
         """
-        Executa a coleta seguindo o loop de páginas e cards.
-        Se max_paginas for None, ele vai até o fim do site.
+        Executa o pipeline completo de coleta, extração e estruturação de dados.
+        
+        Este método coordena o ciclo de vida do scraper, navegando pela paginação do 
+        e-commerce, identificando cards de produtos e processando informações de 
+        preço, identidade e marketplace.
+
+        O processo segue as etapas:
+        1. **Navegação**: Gerencia o loop de páginas com delays aleatórios para evitar bloqueios.
+        2. **Extração (Parsing)**: Utiliza BeautifulSoup para localizar elementos DOM (títulos, preços, links).
+        3. **Identificação de Marketplace**: Analisa parâmetros de URL (`seller_id`) para distinguir 
+           entre 'Venda Direta' (Magazine Luiza) e vendedores terceiros.
+        4. **Normalização**: Converte strings monetárias e textos Unicode em tipos primitivos (float/int).
+        5. **Estruturação (Schema VIP)**: Consolida os dados no formato final para ingestão em Data Lake.
+
+        Args:
+            max_paginas (int, optional): Limite de páginas para a coleta. 
+                Se for None, o scraper percorrerá todas as páginas disponíveis.
+
+        Returns:
+            list[dict]: Uma lista de dicionários, onde cada item é um objeto de produto 
+                validado e estruturado conforme o Schema VIP.
+
+        Raises:
+            Exception: Captura e loga erros em nível de card ou página, garantindo que 
+                uma falha isolada não interrompa todo o pipeline (resiliência).
         """
         self.iniciar_driver()
         buffer_produtos = [] # buffer

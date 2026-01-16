@@ -14,6 +14,17 @@ ENV = os.getenv("ENVIRONMENT", "dev")
 VERSION = os.getenv("PIPELINE_VERSION", "v1.0")
 
 def salvar_dados(dados):
+
+    """
+    Persiste os dados coletados em formato JSON na camada local de dados brutos (raw).
+    
+    Cria automaticamente o diretório de destino e versiona o arquivo utilizando 
+    um timestamp para evitar sobrescrita e garantir o histórico da coleta.
+
+    Args:
+        dados (list[dict]): Lista de produtos estruturados para salvar.
+    """
+
     if not os.path.exists('data/raw'):
         os.makedirs('data/raw')
     
@@ -26,11 +37,20 @@ def salvar_dados(dados):
     print(f"\n💾 Arquivo versionado salvo em: {caminho}")
 
 def executar():
+
+    """
+    Orquestra o fluxo principal (workflow) da aplicação.
+    
+    Responsável por inicializar as configurações de log, instanciar o motor de 
+    scraping com as variáveis de ambiente corretas, disparar o processo de 
+    coleta e garantir a persistência dos dados finais.
+    """
+
     configurar_logs()
     
     print(f"🚀 Iniciando extração | Ambiente: {ENV} | Versão: {VERSION}")
     
-    # 2. Agora passamos as variáveis para o bot corretamente
+    # 2. É passada as variáveis para o bot (scraper) corretamente
     bot = MagaluScraper(ambiente=ENV, versao=VERSION)
     
     # 3. Executa a coleta

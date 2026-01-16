@@ -1,15 +1,34 @@
-# Este arquivo conterá apenas as funções de tratamento. Elas são independentes do Selenium.
 import re
 import logging
 import os
-
-from datetime import datetime
-import hashlib
+import re
 
 def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
+
+    """
+        Transforma dados brutos de extração (raw) em um objeto estruturado (Schema VIP).
+        
+        Realiza o enriquecimento dos dados através de:
+        1. Classificação de categoria via IA (Zero-Shot) ou Regras de Negócio.
+        2. Detecção inteligente de Bundles (combos/bundles), filtrando falsos positivos técnicos (como no caso de '+RAM' no texto).
+        3. Cálculo de métricas de precificação e descontos.
+        4. Normalização de metadados para auditoria e linhagem de dados.
+
+        Args:
+            dados_brutos (dict): Dicionário contendo as chaves extraídas diretamente do HTML 
+                (ex: 'titulo', 'preco_atual', 'id_produto').
+            contexto (dict): Metadados da sessão de coleta (ex: 'timestamp', 'url_produto', 
+                'ambiente', 'versao_pipeline').
+            classificador_ai (obj, optional): Instância do ZeroShotClassifier para 
+                categorização semântica. Default é None.
+
+        Returns:
+            dict: Objeto padronizado seguindo o Schema VIP para ingestão em Data Lake.
+        """
+
     p_original = dados_brutos.get('preco_antigo', 0)
     p_pix = dados_brutos.get('preco_pix', 0)
-    # No seu caso, o preco_atual (venda final) costuma ser o crédito à vista
+    # No caso, o preco_atual (venda final) será o crédito à vista
     p_credito_avista = dados_brutos.get('preco_atual', 0) 
 
     # Se o classificador for enviado, usamos a IA, senão usamos "Outros"
@@ -29,12 +48,12 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
     else:
         categoria = "Outros"
     
-    # 1. Definimos que é bundle APENAS se a IA identificou duas categorias distintas
+    # 1. Definimos que é bundle APENAS se a IA identificou duas categorias distintas - Caso de exceções
     # (Ex: "Smartphone & Fone de Ouvido")
     is_bundle_pela_ia = " & " in categoria
 
     # 2. Criamos uma regra para o sinal de "+" que ignora especificações de RAM
-    # O Regex abaixo procura um " + " que NÃO esteja perto de palavras como "RAM" ou "GB"
+    # O Regex abaixo procura um " + " que NÃO esteja perto de palavras como "RAM" ou "GB" - Outro caso de exceções
     titulo_para_busca = dados_brutos['titulo'].upper()
     tem_mais_separado = " + " in titulo_para_busca
 
@@ -52,7 +71,7 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
         percentual_desc = round((valor_absoluto_desc / p_original) * 100, 2)
 
     # Extração de parcelas do texto (Ex: "12x de R$ 180,46")
-    import re
+    
     parcelas_max = 1
     valor_parcela = p_credito_avista
     txt_parc = dados_brutos.get('parcelamento_original', '')
@@ -114,13 +133,51 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
     }
 
 def normalizar_texto(texto):
-    """Remove espaços invisíveis (U+00a0) e limpa espaços em branco extras"""
+    """
+    Padroniza strings extraídas removendo artefatos comuns de codificação HTML.
+    
+    Esta função atua como a primeira etapa do pipeline de limpeza (cleansing), 
+    garantindo a integridade dos dados ao lidar com caracteres Unicode especiais 
+    que costumam quebrar seletores de texto e cálculos numéricos.
+
+    Args:
+        texto (str): O texto bruto (raw) capturado pelo scraper.
+
+    Returns:
+        str: Texto normalizado sem espaços não-separáveis (\xa0) e sem 
+            espaçamentos excedentes nas extremidades. Retorna "N/A" caso 
+            o dado seja nulo.
+            
+    Example:
+        "  Smartphone\xa0Samsung  " -> "Smartphone Samsung"
+    """
     if not texto:
         return "N/A"
     # Substitui o caractere invisível \xa0 por um espaço comum e remove excessos
     return texto.replace('\xa0', ' ').strip()
 
 def limpar_valor_simples_para_float(texto):
+
+    """
+        Realiza o saneamento e conversão de strings de preço para o tipo float.
+        
+        A função trata inconsistências comuns em dados extraídos da web, como:
+        - Espaços não-separáveis (non-breaking spaces - \xa0).
+        - Símbolos de moeda (R$).
+        - Separadores de milhar (ponto) e decimal (vírgula).
+        - Termos residuais de parcelamento (ex: 'ou').
+
+        Args:
+            texto (str): String bruta contendo o valor monetário extraído do site.
+
+        Returns:
+            float: Valor numérico convertido. Retorna 0.0 em caso de erro ou dado ausente.
+
+        Notes:
+            O tratamento utiliza Regex para isolar o componente numérico após a 
+            normalização dos caracteres especiais de espaço e pontuação.
+        """
+
     if not texto or "N/A" in texto:
         return 0.0
     try:
@@ -132,23 +189,32 @@ def limpar_valor_simples_para_float(texto):
         return float(resultado.group()) if resultado else 0.0
     except:
         return 0.0
-    if not texto or "N/A" in texto:
-        return 0.0
-    try:
-        # 1. Substitui o espaço invisível (U+00a0) por um espaço comum
-        # 2. Em seguida, remove R$, 'ou', pontos de milhar e ajusta a vírgula
-        limpo = texto.replace('\xa0', ' ') # Transforma o invisível em visível
-        limpo = limpo.replace('R$', '').replace('ou', '').replace('.', '').replace(',', '.').strip()
-        
-        # O Regex abaixo vai ignorar qualquer espaço que sobrar e pegar só o número
-        resultado = re.search(r"[-+]?\d*\.\d+|\d+", limpo)
-        return float(resultado.group()) if resultado else 0.0
-    except Exception as e:
-        return 0.0
 
 def calcular_preco_total_parcelado(texto_parcela):
 
-    """Calcula total de parcelas (ex: 10x 399,78 -> 3997.8)"""
+    """
+    Calcula o valor total de uma venda parcelada a partir de uma string descritiva.
+    
+    Extrai a quantidade de parcelas e o valor unitário da parcela para projetar
+    o custo final a prazo, permitindo análises de juros e encargos financeiros.
+
+    Exemplo:
+        "10x de R$ 399,78" -> 3997.8 (Calculou o total de parcelas)
+        "sem juros" -> Identifica os componentes numéricos e realiza o produto.
+
+    Args:
+        texto_parcela (str): Texto bruto contendo a condição de parcelamento 
+            (ex: "12x de R$ 150,00").
+
+    Returns:
+        float: Valor total projetado (parcelas * valor). Retorna 0.0 em caso de 
+            falha na extração ou dados nulos.
+
+    Raises:
+        Logging Error: Registra falhas de conversão no log do sistema para 
+            fins de monitoramento de qualidade dos dados.
+    """
+
     if not texto_parcela or "N/A" in texto_parcela:
         return 0.0
     try:
