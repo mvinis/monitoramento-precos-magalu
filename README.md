@@ -1,13 +1,15 @@
+%md
+
 # 🛒 Monitoramento de Preços E-commerce - Magalu
 
 Este projeto implementa um pipeline de engenharia de dados end-to-end voltado à coleta e análise de produtos do e-commerce da Magazine Luiza. A solução realiza web scraping automatizado, aplica classificação de categorias por meio de modelos de Inteligência Artificial executados localmente e organiza os dados em um schema analítico padronizado (Schema VIP), garantindo consistência, rastreabilidade e prontidão para consumo em plataformas de Big Data como o Databricks.
 
-## 🚀 Funcionalidades
+## 🕸️ Funcionalidades
 
-- **Web Scraping Avançado:** Utiliza Selenium com técnicas de evasão de bot (User-Agents dinâmicos, modo incognito e exclusão de flags de automação).
-- **Deep Data Extraction:** Identifica se o produto é de venda direta ou Marketplace (ex: Carrefour, Samsung) através da análise de metadados da URL.
+- **Web Scraping:** Utiliza Selenium com técnicas de evasão de bot (User-Agents dinâmicos, modo incognito e exclusão de flags de automação).
+- **Deep Data Extraction:** Captura dados sobre os produtos vendidos na plataforma e identifica se o produto é de venda direta ou Marketplace (ex: Carrefour, Samsung) através da análise de metadados da URL.
 - **Classificação com IA Local:** Utiliza o modelo `mDeBERTa-v3` (via Hugging Face Transformers) para classificar produtos em categorias sem custo de API e com alta precisão (Zero-Shot Classification).
-- **Detecção de Bundles:** Lógica inteligente para identificar combos de produtos (bundles - ex: Relógio + Fone), tratando falsos positivos técnicos.
+- **Detecção de Bundles:** Lógica inteligente para identificar combos de produtos (chamados "bundles" na mesma proposta de venda do produto - ex: Relógio + Fone), tratando falsos positivos técnicos.
 - **Metadata de Auditoria:** Cada registro contém informações de versão do pipeline, ambiente (dev/prod) e timestamp, garantindo linhagem de dados.
 - **Schema VIP Profissional:** Estrutura de JSON aninhada que separa dados de produto, precificação detalhada (PIX, Crédito, Parcelamento) e fontes.
 
@@ -34,34 +36,44 @@ Este projeto implementa um pipeline de engenharia de dados end-to-end voltado à
 └── requirements.txt      # Dependências do projeto
 ```
 
-⚙️ Instruções de Configuração
+## ⚙️ Instruções de Configuração
 
-1. Pré-requisitos
+**1. Pré-requisitos**
 
-Python instalado.
-Google Chrome instalado.
+- Python instalado
+- Google Chrome instalado
 
-2. Instalação
-   Clone o repositório e instale as dependências:
+**2. Pré-requisitos**
 
-Bash
+Clone o repositório e instale as dependências:
 
-git clone [https://github.com/mvinis/monitoramento-precos-magalu.git](https://github.com/mvinis/monitoramento-precos-magalu.git)
-cd monitoramento-precos-magalu
-python -m venv venv
-source venv/bin/activate # No Windows: .\venv\Scripts\activate
-pip install -r requirements.txt 3. Variáveis de Ambiente
-Crie um arquivo .env na raiz do projeto:
+- `git clone [https://github.com/mvinis/monitoramento-precos-magalu.git](https://github.com/mvinis/monitoramento-precos-magalu.git)`
 
-Snippet de código
+- `cd monitoramento-precos-magalu`
 
-PIPELINE_VERSION=v1.2
-ENVIRONMENT=prod
-COLLECTION_TYPE=web_scraping
+- `python -m venv venv`
 
-4. Execução
-   Para iniciar a coleta, basta rodar:
+- `source venv/bin/activate`
+- No Windows: `.\venv\Scripts\activate`
 
-Bash
+- `pip install -r requirements.txt`
 
-python main.py
+**3. Variáveis de Ambiente**
+
+Crie um arquivo `.env` na raiz do projeto:
+
+**Snippet de código**
+
+`PIPELINE_VERSION=v1.2`
+
+`ENVIRONMENT=prod`
+
+`COLLECTION_TYPE=web_scraping`
+
+**4. Execução**
+
+Para iniciar a coleta dos dados dos produtos, basta rodar:
+
+`python main.py`
+
+> Nota: Na primeira execução, o script realizará o download do modelo de linguagem (mDeBERTa) automaticamente. Certifique-se de ter espaço em disco (~500MB) e conexão com a internet. O mDeBERTa é um modelo de Inteligência Artificial treinado para entender o significado profundo de textos em diversos idiomas, inclusive o português. Ele é necessário para analisar os nomes dos produtos e decidir, de forma inteligente e sem regras manuais (fixadas no código), em qual categoria cada item se encaixa (ex: Smartphones, Acessórios ou Áudio).
