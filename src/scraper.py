@@ -175,7 +175,7 @@ class MagaluScraper:
                                 "ambiente": self.ambiente,
                                 "versao_pipeline": self.versao,
                                 "tipo_coleta": self.tipo_coleta,
-                                "url_produto": f"https://www.magazineluiza.com.br{link_relativo}",
+                                "url_produto": f"https://www.magazinevoce.com.br{link_relativo}",
                                 "canal_venda": canal_venda,
                                 "loja": vendedor_nome,
                                 "pagina": pagina

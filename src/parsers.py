@@ -135,7 +135,7 @@ import re
 def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
     """
     Transforma dados brutos em um objeto estruturado (Schema VIP).
-    Aplica IA para categorias e filtra falsos positivos de bundles (Ex: Câmera + Selfie).
+    Realiza o enriquecimento e a detecção inteligente de bundles multi-categoria.
     """
 
     # 1. Extração e Tipagem de Preços
@@ -143,39 +143,78 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
     p_pix = dados_brutos.get('preco_pix', 0)
     p_credito_avista = dados_brutos.get('preco_atual', 0) 
 
-    # 2. Classificação de Categoria (IA + Regras de Negócio)
+    # 2. Lógica de Categorização
     titulo_raw = dados_brutos.get('titulo', 'N/A')
+    titulo_low = titulo_raw.lower()
     
-    if classificador_ai:
-        categoria = classificador_ai.classificar(titulo_raw)
-    else:
-        # Fallback de regras simples caso a IA falhe
-        titulo_low = titulo_raw.lower()
-        if any(k in titulo_low for k in ['fone', 'headset']): categoria = "Acessórios / Áudio"
-        elif any(k in titulo_low for k in ['cabo', 'capa']): categoria = "Acessórios / Mobile"
-        elif any(k in titulo_low for k in ['smart', 'celular']): categoria = "Smartphones"
-        else: categoria = "Outros"
-
-    # 3. Refinamento de Bundle (Evita o erro do Samsung A36)
-    # Verificamos se há indicativo de combo (+ ou &)
+    # Identificamos se é Bundle (Filtrando falsos positivos como RAM+)
     tem_sinal_bundle = "+" in titulo_raw or "&" in titulo_raw
-    # Aplicamos a função de validação técnica
     is_bundle_final = detectar_bundle(titulo_raw, tem_sinal_bundle)
 
-    # 4. Cálculo de Descontos
+    # --- DEFINIÇÃO DE CATEGORIA BASE ---
+    # Mapeamento para garantir que a categoria_base seja única e limpa
+    if any(k in titulo_low for k in ['relógio', 'relogio', 'watch', 'smartwatch', 'gps']):
+        categoria_base = "Smartwatch"
+    elif any(k in titulo_low for k in ['smartband', 'pulseira inteligente', 'mi band', 'fitband', 'band']):
+        categoria_base = "Smartband"
+    elif any(k in titulo_low for k in ['smartphone', 'smarphone', 'poco', 'x7', '4g', '5g', '256 gb', '256gb', '64gb', '64 gb']):
+        categoria_base = "Smartphone"
+    elif any(k in titulo_low for k in ['2g', '3g', 'teclado', 'celular', 'chip']):
+        categoria_base = "Celular Básico"
+    elif any(k in titulo_low for k in ['carregador', 'cabo', 'fonte', 'adaptador', 'power bank']):
+        categoria_base = "Carregador"
+    elif any(k in titulo_low for k in ['smart glasses', 'óculos inteligente', 'oculos inteligente']):
+        categoria_base = "Óculos Inteligente"
+    elif any(k in titulo_low for k in ['fone', 'headset', 'earbud', 'bluetooth']):
+        categoria_base = "Áudio"
+    elif any(k in titulo_low for k in ['capa', 'capinha', 'película', 'pelicula', 'case']):
+        categoria_base = "Proteção"
+    else:
+        categoria_base = classificador_ai.classificar(titulo_raw) if classificador_ai else "Outros"
+
+    # --- AJUSTE INTELIGENTE DE BUNDLE (Multi-Categoria) ---
+    if is_bundle_final:
+        # Usamos um set para evitar duplicatas (ex: evitar 'Smartwatch + Smartwatch')
+        itens_no_combo = {categoria_base}
+        
+        # Mapa de busca para identificar o segundo/terceiro item do bundle
+        mapa_identificacao = {
+            'relógio': 'Smartwatch', 'relogio': 'Smartwatch', 'watch': 'Smartwatch', 'smartwatch': 'Smartwatch',
+            'fone': 'Áudio', 'bluetooth': 'Áudio', 'headset': 'Áudio', 'earbud': 'Áudio',
+            'carregador': 'Carregador', 'cabo': 'Cabo',
+            'capa': 'Capa', 'película': 'Película', 'pelicula': 'Película',
+            'smartphone': 'Smartphone',
+            'smartband': 'Smartband', 'pulseira': 'Smartband'
+        }
+        
+        for termo, nome_limpo in mapa_identificacao.items():
+            if termo in titulo_low:
+                itens_no_combo.add(nome_limpo)
+        
+        # Ordenamos para manter consistência (ex: Smartphone sempre vem antes de Áudio)
+        lista_ordenada = sorted(list(itens_no_combo))
+        
+        if len(lista_ordenada) > 1:
+            categoria = " + ".join(lista_ordenada)
+        else:
+            categoria = f"{categoria_base} + Acessório"
+    else:
+        categoria = categoria_base
+
+    # 3. Cálculo de Descontos
     valor_absoluto_desc = 0
     percentual_desc = 0
     if p_original > p_credito_avista and p_original > 0:
         valor_absoluto_desc = round(p_original - p_credito_avista, 2)
         percentual_desc = round((valor_absoluto_desc / p_original) * 100, 2)
 
-    # 5. Tratamento de Parcelamento
+    # 4. Tratamento de Parcelamento
     txt_parc = dados_brutos.get('parcelamento_original', '')
     match_parc = re.search(r'(\d+)x', txt_parc)
     parcelas_max = int(match_parc.group(1)) if match_parc else 1
     valor_parcela = round(p_credito_avista / parcelas_max, 2) if parcelas_max > 0 else p_credito_avista
 
-    # 6. Construção do Objeto Final (Schema VIP)
+    # 5. Construção do Objeto Final (Schema VIP)
     return {
         "metadata": {
             "timestamp_coleta": contexto['timestamp'],
@@ -194,7 +233,7 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
         },
         "preço": {
             "moeda": "BRL",
-            "preco_base": p_credito_avista, # Valor de venda final (crédito à vista)
+            "preco_base": p_credito_avista,
             "preco_original": p_original if p_original > 0 else None,
             "descontos": {
                 "percentual": percentual_desc,
