@@ -1,220 +1,134 @@
 import re
 import logging
-import os
-import re
-
-# def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
-
-#     """
-#         Transforma dados brutos de extração (raw) em um objeto estruturado (Schema VIP).
-        
-#         Realiza o enriquecimento dos dados através de:
-#         1. Classificação de categoria via IA (Zero-Shot) ou Regras de Negócio.
-#         2. Detecção inteligente de Bundles (combos/bundles), filtrando falsos positivos técnicos (como no caso de '+RAM' no texto).
-#         3. Cálculo de métricas de precificação e descontos.
-#         4. Normalização de metadados para auditoria e linhagem de dados.
-
-#         Args:
-#             dados_brutos (dict): Dicionário contendo as chaves extraídas diretamente do HTML 
-#                 (ex: 'titulo', 'preco_atual', 'id_produto').
-#             contexto (dict): Metadados da sessão de coleta (ex: 'timestamp', 'url_produto', 
-#                 'ambiente', 'versao_pipeline').
-#             classificador_ai (obj, optional): Instância do ZeroShotClassifier para 
-#                 categorização semântica. Default é None.
-
-#         Returns:
-#             dict: Objeto padronizado seguindo o Schema VIP para ingestão em Data Lake.
-#         """
-
-#     p_original = dados_brutos.get('preco_antigo', 0)
-#     p_pix = dados_brutos.get('preco_pix', 0)
-#     # No caso, o preco_atual (venda final) será o crédito à vista
-#     p_credito_avista = dados_brutos.get('preco_atual', 0) 
-
-#     # Se o classificador for enviado, usamos a IA, senão usamos "Outros"
-#     if classificador_ai:
-#         categoria = classificador_ai.classificar(dados_brutos['titulo'])
-#     else:
-#         categoria = "A classificar"
-    
-#     # Lógica de Categoria Dinâmica
-#     titulo = dados_brutos['titulo'].lower()
-#     if any(k in titulo for k in ['fone', 'headset', 'earbud']):
-#         categoria = "Acessórios / Áudio"
-#     elif any(k in titulo for k in ['cabo', 'carregador', 'pelicula', 'capa']):
-#         categoria = "Acessórios / Mobile"
-#     elif any(k in titulo for k in ['smartphone', 'celular', 'iphone', 'motorola', 'samsung', 'xiaomi']):
-#         categoria = "Smartphones"
-#     else:
-#         categoria = "Outros"
-    
-#     # 1. Definimos que é bundle APENAS se a IA identificou duas categorias distintas - Caso de exceções
-#     # (Ex: "Smartphone & Fone de Ouvido")
-#     is_bundle_pela_ia = " & " in categoria
-
-#     # 2. Criamos uma regra para o sinal de "+" que ignora especificações de RAM
-#     # O Regex abaixo procura um " + " que NÃO esteja perto de palavras como "RAM" ou "GB" - Outro caso de exceções
-#     titulo_para_busca = dados_brutos['titulo'].upper()
-#     tem_mais_separado = " + " in titulo_para_busca
-
-#     # Verificamos se o "+" não é apenas propaganda de RAM (comum em Motorola e Samsung)
-#     is_ram_boost = "RAM+" in titulo_para_busca or "+8GB" in titulo_para_busca
-
-#     # Lógica Final: É bundle se a IA disse que sim OU se tem um " + " que não seja RAM Boost
-#     is_bundle_final = is_bundle_pela_ia or (tem_mais_separado and not is_ram_boost)
-
-#     # Cálculo de Descontos
-#     valor_absoluto_desc = 0
-#     percentual_desc = 0
-#     if p_original > p_credito_avista and p_original > 0:
-#         valor_absoluto_desc = round(p_original - p_credito_avista, 2)
-#         percentual_desc = round((valor_absoluto_desc / p_original) * 100, 2)
-
-#     # Extração de parcelas do texto (Ex: "12x de R$ 180,46")
-    
-#     parcelas_max = 1
-#     valor_parcela = p_credito_avista
-#     txt_parc = dados_brutos.get('parcelamento_original', '')
-    
-#     match_parc = re.search(r'(\d+)x', txt_parc)
-#     if match_parc:
-#         parcelas_max = int(match_parc.group(1))
-#         # Se você já tem o valor_parcela vindo do scraper, use-o. 
-#         # Aqui vamos estimar dividindo o total pelo número de parcelas
-#         valor_parcela = round(p_credito_avista / parcelas_max, 2)
-
-#     return {
-#         "metadata": {
-#             "timestamp_coleta": contexto['timestamp'],
-#             "plataforma": "Magazine Luiza",  # Fixo, pois este parser é para Magalu
-#             "scraper_name": "MagaluScraper",
-#             "versao_pipeline": contexto['versao_pipeline'], # Dinâmico
-#             "ambiente": contexto['ambiente'],               # Dinâmico
-#             "tipo_coleta": os.getenv("COLLECTION_TYPE", "manual")
-#         },
-#         "produto": {
-#             "id_site": dados_brutos['id_produto'],
-#             "nome": dados_brutos['titulo'],
-#             "categoria": categoria,
-#             "is_bundle": is_bundle_final,
-#             "sku": dados_brutos['id_produto']
-#         },
-#         "preço": {
-#             "moeda": "BRL",
-#             "preco_base": p_credito_avista,
-#             "preco_original": p_original if p_original > 0 else None,
-#             "descontos": {
-#                 "percentual": percentual_desc,
-#                 "valor_absoluto": valor_absoluto_desc
-#             },
-#             "precos_por_metodo": {
-#                 "pix": p_pix if p_pix > 0 else None,
-#                 "boleto": p_pix if p_pix > 0 else None,
-#                 "credito_avista": p_credito_avista
-#             },
-#             "parcelamento": {
-#                 "parcelas_max": parcelas_max,
-#                 "valor_parcela": valor_parcela,
-#                 "sem_juros": "sem juros" in txt_parc.lower()
-#             }
-#         },
-#         "vendedor": {
-#             "nome": contexto["loja"],
-#             "tipo_vendedor": "VENDEDOR_TERCEIRO" if contexto["canal_venda"] else "PLATAFORMA"
-#         },
-#         "plataforma": {
-#                 "nome": "Magazine Luiza",
-#                 "canal_venda": contexto["canal_venda"]
-#         },
-#         "origem": {
-#             "url_completa": contexto['url_produto'],
-#             "pagina_origem": contexto['pagina']
-#         }
-#     }
 
 def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
     """
     Transforma dados brutos em um objeto estruturado (Schema VIP).
-    Realiza o enriquecimento e a detecção inteligente de bundles multi-categoria.
+    Mantém a integridade das chaves originais com lógica de classificação híbrida.
     """
-
-    # 1. Extração e Tipagem de Preços
+    
+    # --- 1. EXTRAÇÃO E TIPAGEM (SEUS CAMPOS ORIGINAIS) ---
     p_original = dados_brutos.get('preco_antigo', 0)
     p_pix = dados_brutos.get('preco_pix', 0)
     p_credito_avista = dados_brutos.get('preco_atual', 0) 
-
-    # 2. Lógica de Categorização
+    
     titulo_raw = dados_brutos.get('titulo', 'N/A')
     titulo_low = titulo_raw.lower()
+    is_bundle_final = detectar_bundle(titulo_raw)
+
+    logging.info(f"--- Processando: {titulo_raw[:50]}... ---")
     
-    # Identificamos se é Bundle (Filtrando falsos positivos como RAM+)
-    tem_sinal_bundle = "+" in titulo_raw or "&" in titulo_raw
-    is_bundle_final = detectar_bundle(titulo_raw, tem_sinal_bundle)
+    # Captura a posição das palavras-chave de Hardware para comparar
+    pos_hw = -1
+    for k in ['iphone', 'smartphone', 'galaxy', 'motorola', 'redmi', 'poco', 'xiaomi']:
+        p = titulo_low.find(k)
+        if p != -1 and (pos_hw == -1 or p < pos_hw):
+            pos_hw = p
 
-    # --- DEFINIÇÃO DE CATEGORIA BASE ---
-    # Mapeamento para garantir que a categoria_base seja única e limpa
-    if any(k in titulo_low for k in ['relógio', 'relogio', 'watch', 'smartwatch', 'gps']):
-        categoria_base = "Smartwatch"
-    elif any(k in titulo_low for k in ['smartband', 'pulseira inteligente', 'mi band', 'fitband', 'band']):
-        categoria_base = "Smartband"
-    elif any(k in titulo_low for k in ['smartphone', 'smarphone', 'poco', 'x7', '4g', '5g', '256 gb', '256gb', '64gb', '64 gb']):
-        categoria_base = "Smartphone"
-    elif any(k in titulo_low for k in ['2g', '3g', 'teclado', 'celular', 'chip']):
-        categoria_base = "Celular Básico"
-    elif any(k in titulo_low for k in ['carregador', 'cabo', 'fonte', 'adaptador', 'power bank']):
-        categoria_base = "Carregador"
-    elif any(k in titulo_low for k in ['smart glasses', 'óculos inteligente', 'oculos inteligente']):
-        categoria_base = "Óculos Inteligente"
-    elif any(k in titulo_low for k in ['fone', 'headset', 'earbud', 'bluetooth']):
-        categoria_base = "Áudio"
-    elif any(k in titulo_low for k in ['capa', 'capinha', 'película', 'pelicula', 'case']):
-        categoria_base = "Proteção"
-    else:
-        categoria_base = classificador_ai.classificar(titulo_raw) if classificador_ai else "Outros"
-
-    # --- AJUSTE INTELIGENTE DE BUNDLE (Multi-Categoria) ---
-    if is_bundle_final:
-        # Usamos um set para evitar duplicatas (ex: evitar 'Smartwatch + Smartwatch')
-        itens_no_combo = {categoria_base}
-        
-        # Mapa de busca para identificar o segundo/terceiro item do bundle
-        mapa_identificacao = {
-            'relógio': 'Smartwatch', 'relogio': 'Smartwatch', 'watch': 'Smartwatch', 'smartwatch': 'Smartwatch',
-            'fone': 'Áudio', 'bluetooth': 'Áudio', 'headset': 'Áudio', 'earbud': 'Áudio',
-            'carregador': 'Carregador', 'cabo': 'Cabo',
-            'capa': 'Capa', 'película': 'Película', 'pelicula': 'Película',
-            'smartphone': 'Smartphone',
-            'smartband': 'Smartband', 'pulseira': 'Smartband'
-        }
-        
-        for termo, nome_limpo in mapa_identificacao.items():
-            if termo in titulo_low:
-                itens_no_combo.add(nome_limpo)
-        
-        # Ordenamos para manter consistência (ex: Smartphone sempre vem antes de Áudio)
-        lista_ordenada = sorted(list(itens_no_combo))
-        
-        if len(lista_ordenada) > 1:
-            categoria = " + ".join(lista_ordenada)
+    # BLOCO 1: ACESSÓRIOS E ENERGIA (Verificamos se eles vêm ANTES do Hardware)
+    
+    # 1.1 Energia
+    if any(k in titulo_low for k in ['carregador', 'cabo', 'fonte', 'adaptador', 'power bank']):
+        pos_acc = min([titulo_low.find(k) for k in ['carregador', 'cabo', 'fonte', 'adaptador', 'power bank'] if titulo_low.find(k) != -1])
+        if pos_hw == -1 or pos_acc < pos_hw:
+            categoria_base = "Carregador"
         else:
-            categoria = f"{categoria_base} + Acessório"
+            categoria_base = "Smartphone"
+
+    # 1.2 Proteção e Estética
+    elif any(k in titulo_low for k in ['capa', 'capinha', 'película', 'pelicula', 'case', 'pulseira', 'smarttag', 'airtag', 'rastreador', 'localizador']):
+        pos_acc = min([titulo_low.find(k) for k in ['capa', 'capinha', 'película', 'pelicula', 'case', 'pulseira', 'smarttag', 'rastreador', 'airtag', 'rastreador', 'localizador'] if titulo_low.find(k) != -1])
+        if pos_hw == -1 or pos_acc < pos_hw:
+            categoria_base = "Acessório" if 'pulseira' in titulo_low else "Proteção"
+        else:
+            categoria_base = "Smartphone"
+
+    # 1.3 Suportes e Estabilizadores (NOVO)
+    # Adicionamos gatilhos como 'tripé', 'bastão', 'estabilizador'
+    elif any(k in titulo_low for k in ['suporte', 'tripe', 'tripé', 'bastão', 'pau de selfie', 'estabilizador', 'ring light']):
+        termos_sup = ['suporte', 'tripe', 'tripé', 'bastão', 'pau de selfie', 'estabilizador', 'ring light']
+        pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
+        
+        # Se o termo 'suporte' vier antes do nome da marca/hardware, é um Suporte.
+        if pos_hw == -1 or pos_acc < pos_hw:
+            categoria_base = "Suporte"
+        else:
+            categoria_base = "Smartphone"
+
+    # Mova este bloco para cima do bloco de Celular
+    elif any(k in titulo_low for k in ['óculos', 'oculos', 'vr', 'realidade virtual', 'óculos 3d', '3d']):
+        categoria_base = "Óculos Inteligente"
+
+    # Mova este bloco para cima do bloco de Celular
+    elif any(k in titulo_low for k in ['gamepad', 'joystick', 'playstation', 'xbox', 'nintendo', 'pc gamer', 'ps']):
+        categoria_base = "Console"
+    
+    # CELULAR
+    elif any(k in titulo_low for k in ['celular', 'celular antigo', '2g']):
+        termos_sup = ['celular', 'celular antigo', '2g']
+        pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
+        
+        # Se o termo 'suporte' vier antes do nome da marca/hardware, é um Suporte.
+        if pos_hw == -1 or pos_acc < pos_hw:
+            categoria_base = "Celular Básico"
+        else:
+            categoria_base = "Smartphone"
+    
+    elif any(k in titulo_low for k in ['relógio', 'relogio', 'watch', 'smartwatch', 'hw5', 'w28']):
+        categoria_base = "Smartwatch"
+
+    elif any(k in titulo_low for k in ['smartband', 'mi band', 'fitband', 'band', 'm3', 'm4', 'fit']):
+        termos_sup = ['smartband', 'mi band', 'fitband', 'band', 'm3', 'm4', 'fit']
+        pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
+        
+        # Se o termo 'suporte' vier antes do nome da marca/hardware, é um Suporte.
+        if pos_hw == -1 or pos_acc < pos_hw:
+            categoria_base = "Smartband"
+        else:
+            categoria_base = "Smartphone"
+    
+    elif any(k in titulo_low for k in ['chip', 'pre-pago', 'pré-pago', 'pre pago', 'smart card', 'microchip', 'minichip', 'nanochip', 'cartão sim']):
+        termos_sup = ['chip', 'pre-pago', 'pré-pago', 'pre pago']
+        pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
+        
+        if pos_hw == -1 or pos_acc < pos_hw:
+            categoria_base = "Chip"
+        else:
+            categoria_base = "Smartphone"
+
+    # BLOCO 2: HARDWARE DIRETO (Quando não há acessório no título ou o Hardware veio primeiro)
+    elif pos_hw != -1 or any(k in titulo_low for k in ['smartphone', 'smarphone', 'smart phone', 'not', 'x7', 'redmi note', 'realme', 'C61', 'lg k', 'motorola', '14 pro', '15 pro', '13 pro', '12 pro']):
+        categoria_base = "Smartphone"
+
+    elif any(k in titulo_low for k in ['celular', 'celular antigo', '2g', 'telefone']):
+        categoria_base = "Celular Básico"
+
+    # BLOCO 3: IA (A rede de segurança final)
+    else:
+        if classificador_ai:
+            categoria_base = classificador_ai.classificar(titulo_raw)
+        else:
+            categoria_base = "Outros"
+
+    # --- 3. LÓGICA DE BUNDLE (CONSTRUÇÃO DA STRING FINAL) ---
+    if is_bundle_final:
+        categoria = montar_string_bundle(categoria_base, titulo_low)
     else:
         categoria = categoria_base
 
-    # 3. Cálculo de Descontos
+    # --- 4. CÁLCULOS FINANCEIROS (MANTIDOS) ---
     valor_absoluto_desc = 0
     percentual_desc = 0
     if p_original > p_credito_avista and p_original > 0:
         valor_absoluto_desc = round(p_original - p_credito_avista, 2)
         percentual_desc = round((valor_absoluto_desc / p_original) * 100, 2)
 
-    # 4. Tratamento de Parcelamento
     txt_parc = dados_brutos.get('parcelamento_original', '')
     match_parc = re.search(r'(\d+)x', txt_parc)
     parcelas_max = int(match_parc.group(1)) if match_parc else 1
     valor_parcela = round(p_credito_avista / parcelas_max, 2) if parcelas_max > 0 else p_credito_avista
 
-    # 5. Construção do Objeto Final (Schema VIP)
+    # --- 5. CONSTRUÇÃO DO OBJETO FINAL (SCHEMA VIP RESTAURADO) ---
     return {
         "metadata": {
             "timestamp_coleta": contexto['timestamp'],
@@ -264,87 +178,76 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
         }
     }
 
-def detectar_bundle(titulo, is_bundle_inicial):
-    """
-    Refina a detecção de bundle para evitar falsos positivos como 'Câmera + Selfie'.
-    """
-    if not is_bundle_inicial:
-        return False
+# --- FUNÇÕES AUXILIARES ---
 
-    titulo_limpo = titulo.lower()
+def montar_string_bundle(base, titulo_low):
+    componentes = [base]
+    extras = {
+        'película': 'Película', 'pelicula': 'Película',
+        'capa': 'Capa', 'capinha': 'Capa',
+        'pulseira': 'Acessório', 'fone': 'Áudio',
+        'cabo': 'Cabo', 'fonte': 'Fonte'
+    }
+    for termo, nome_exibicao in extras.items():
+        # Evita adicionar "Capa" se a base já for "Proteção" por exemplo
+        if termo in titulo_low and nome_exibicao.lower() not in base.lower():
+            componentes.append(nome_exibicao)
+    return " + ".join(list(dict.fromkeys(componentes)))
+
+def detectar_bundle(titulo):
+    """
+    Detecta se o produto é um combo real, ignorando especificações técnicas
+    que usam sinais gráficos (ex: 4+4GB RAM).
+    """
+    titulo_low = titulo.lower()
+
+    # 1. SINAIS GRÁFICOS
+    tem_sinal = any(s in titulo_low for s in ['+', '&', ' c/'])
+
+    # 2. PADRÕES DE QUANTIDADE (Ex: 2 fones)
+    match_acessorios = re.search(r'\d+\s*(pulseiras|fones|películas|peliculas|capas|case|tiras)', titulo_low)
     
-    # Lista de 'falsos amigos': termos que usam "+" mas não são combos de produtos
-    termos_bloqueados = [
-        'selfie', 'camera', 'câm', 'ram', 'boost', 'nfc', 'foco', 
-        'zoom', 'megapixel', 'sony', 'ai camera', 'sensor'
-    ]
-    
-    # Se encontrarmos qualquer um desses termos perto do "+", desmarcamos o bundle
-    for termo in termos_bloqueados:
-        # Verifica se o termo existe no título (geralmente acompanhando o +)
-        if termo in titulo_limpo:
+    # 3. PALAVRAS-CHAVE DE ITENS EXTRAS
+    itens_adicionais = ['brinde', 'kit', 'combo', 'fone bluetooth', 'cabo', 'fonte']
+    tem_item_extra = any(k in titulo_low for k in itens_adicionais)
+
+    # --- LÓGICA DE FILTRAGEM (O Pulo do Gato) ---
+    if tem_sinal:
+        # Se o sinal estiver "grudado" em GB ou RAM, é especificação, não bundle
+        # Ex: "4+4GB", "8GB+16GB"
+        if re.search(r'\d+\s*[+&]\s*\d+\s*(gb|ram)', titulo_low):
             return False
-            
-    return True
+        
+        # Termos que usam "+" ou "&" mas são apenas uma característica do hardware
+        termos_bloqueio = [
+            'ram', 'gb', 'mah', 'nfc', 'camera', 'câmera', 'selfie', 'zoom',
+            'whatsapp', 'zap', 'facebook', 'instagram', 'bluetooth', 'nf',
+            'samsung', 'xiaomi', 'iphone', 'apple', 'motorola', 'garantia',
+            'dual', 'chip', 'sim', 'virtual', 'garantia'
+        ]
+        
+        # Se o título tiver o sinal MAS tiver uma dessas palavras, 
+        # a gente só aceita se houver um item extra explícito (kit, brinde)
+        if any(t in titulo_low for t in termos_bloqueio) and not tem_item_extra:
+            return False
+
+    return bool(match_acessorios) or tem_item_extra or tem_sinal
 
 def normalizar_texto(texto):
-    """
-    Padroniza strings extraídas removendo artefatos comuns de codificação HTML.
-    
-    Esta função atua como a primeira etapa do pipeline de limpeza (cleansing), 
-    garantindo a integridade dos dados ao lidar com caracteres Unicode especiais 
-    que costumam quebrar seletores de texto e cálculos numéricos.
-
-    Args:
-        texto (str): O texto bruto (raw) capturado pelo scraper.
-
-    Returns:
-        str: Texto normalizado sem espaços não-separáveis (\xa0) e sem 
-            espaçamentos excedentes nas extremidades. Retorna "N/A" caso 
-            o dado seja nulo.
-            
-    Example:
-        "  Smartphone\xa0Samsung  " -> "Smartphone Samsung"
-    """
-    if not texto:
-        return "N/A"
-    # Substitui o caractere invisível \xa0 por um espaço comum e remove excessos
+    if not texto: return "N/A"
     return texto.replace('\xa0', ' ').strip()
 
 def limpar_valor_simples_para_float(texto):
 
-    """
-        Realiza o saneamento e conversão de strings de preço para o tipo float.
-        
-        A função trata inconsistências comuns em dados extraídos da web, como:
-        - Espaços não-separáveis (non-breaking spaces - \xa0).
-        - Símbolos de moeda (R$).
-        - Separadores de milhar (ponto) e decimal (vírgula).
-        - Termos residuais de parcelamento (ex: 'ou').
-
-        Args:
-            texto (str): String bruta contendo o valor monetário extraído do site.
-
-        Returns:
-            float: Valor numérico convertido. Retorna 0.0 em caso de erro ou dado ausente.
-
-        Notes:
-            O tratamento utiliza Regex para isolar o componente numérico após a 
-            normalização dos caracteres especiais de espaço e pontuação.
-        """
-
-    if not texto or "N/A" in texto:
-        return 0.0
+    if not texto or "N/A" in texto: return 0.0
     try:
-        # Primeiro normalizamos para garantir que o \xa0 sumiu
         limpo = normalizar_texto(texto)
         limpo = limpo.replace('R$', '').replace('ou', '').replace('.', '').replace(',', '.').replace(' ', '')
-        
         resultado = re.search(r"[-+]?\d*\.\d+|\d+", limpo)
         return float(resultado.group()) if resultado else 0.0
     except:
         return 0.0
-
+    
 def calcular_preco_total_parcelado(texto_parcela):
 
     """

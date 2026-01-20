@@ -19,6 +19,8 @@ from src.parsers import (
 )
 from src.utils import obter_timestamp
 
+ia_instanciada = ProductClassifier()
+
 class MagaluScraper:
     def __init__(self, ambiente="dev", versao="1.0"):
         self.ambiente = ambiente
@@ -182,7 +184,7 @@ class MagaluScraper:
                             }
 
                             # 6. Montagem e Buffer
-                            produto_final = montar_objeto_produto(dados_limpos, contexto)
+                            produto_final = montar_objeto_produto(dados_limpos, contexto, classificador_ai=ia_instanciada)
                             buffer_produtos.append(produto_final)
 
                         except Exception as e:

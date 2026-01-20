@@ -94,6 +94,6 @@ Para garantir a integridade dos dados e a resiliência das transformações (esp
 
 Certifique-se de que o ambiente virtual está ativo e execute:
 
-`python -m pytest`
+`python -m pytest -v`
 
-> Esse comando é necessário, pois o `pytest` executa os testes a partir da pasta `tests` e, por padrão, não reconhece a pasta `src` no `PYTHONPATH`, impedindo a importação das funções. Por isso, é necessário utilizar `python -m` no início do comando.
+> Esse comando é necessário, pois o `pytest` executa os testes a partir da pasta `tests` e, por padrão, não reconhece a pasta `src` no `PYTHONPATH`, impedindo a importação das funções. Por isso, é necessário utilizar `python -m` no início do comando. E `-v`é para ver as funções exatas de cada arquivo.
