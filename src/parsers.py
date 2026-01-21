@@ -196,39 +196,39 @@ def montar_string_bundle(base, titulo_low):
 
 def detectar_bundle(titulo):
     """
-    Detecta se o produto é um combo real, ignorando especificações técnicas
-    que usam sinais gráficos (ex: 4+4GB RAM).
+    Detecta combos reais, limpando especificações de RAM, Tela (FHD+) 
+    e Câmeras (+ Selfie) para evitar falsos positivos.
     """
     titulo_low = titulo.lower()
 
-    # 1. SINAIS GRÁFICOS
-    tem_sinal = any(s in titulo_low for s in ['+', '&', ' c/'])
-
-    # 2. PADRÕES DE QUANTIDADE (Ex: 2 fones)
-    match_acessorios = re.search(r'\d+\s*(pulseiras|fones|películas|peliculas|capas|case|tiras)', titulo_low)
+    # 1. LIMPEZA DE ESPECIFICAÇÕES TÉCNICAS (O Escudo)
+    # Limpa RAM: "4+4gb", "8gb+16gb", "ram+boost", "+ 8gb ram"
+    titulo_limpo = re.sub(r'\d+\s*[+&]\s*\d+\s*(gb|ram|virtual)', '', titulo_low)
+    titulo_limpo = re.sub(r'ram\s*[+&]\s*boost', '', titulo_limpo)
+    titulo_limpo = re.sub(r'\+\s*\d+\s*gb', '', titulo_limpo)
     
-    # 3. PALAVRAS-CHAVE DE ITENS EXTRAS
-    itens_adicionais = ['brinde', 'kit', 'combo', 'fone bluetooth', 'cabo', 'fonte']
-    tem_item_extra = any(k in titulo_low for k in itens_adicionais)
+    # Limpa Tela: "fhd+", "hd+", "qhd+"
+    titulo_limpo = re.sub(r'(fhd|hd|qhd|amoled|oled|ips)\s*\+', '', titulo_limpo)
+    
+    # Limpa Câmeras: "+ selfie", "+ frontal", "+ cam"
+    titulo_limpo = re.sub(r'\+\s*(selfie|frontal|cam|câm|traseira)', '', titulo_limpo)
 
-    # --- LÓGICA DE FILTRAGEM (O Pulo do Gato) ---
-    if tem_sinal:
-        # Se o sinal estiver "grudado" em GB ou RAM, é especificação, não bundle
-        # Ex: "4+4GB", "8GB+16GB"
-        if re.search(r'\d+\s*[+&]\s*\d+\s*(gb|ram)', titulo_low):
-            return False
-        
-        # Termos que usam "+" ou "&" mas são apenas uma característica do hardware
-        termos_bloqueio = [
-            'ram', 'gb', 'mah', 'nfc', 'camera', 'câmera', 'selfie', 'zoom',
-            'whatsapp', 'zap', 'facebook', 'instagram', 'bluetooth', 'nf',
-            'samsung', 'xiaomi', 'iphone', 'apple', 'motorola', 'garantia',
-            'dual', 'chip', 'sim', 'virtual', 'garantia'
-        ]
-        
-        # Se o título tiver o sinal MAS tiver uma dessas palavras, 
-        # a gente só aceita se houver um item extra explícito (kit, brinde)
-        if any(t in titulo_low for t in termos_bloqueio) and not tem_item_extra:
+    # 2. VERIFICAÇÃO NO TÍTULO LIMPO
+    tem_sinal = any(s in titulo_limpo for s in ['+', '&', ' c/'])
+    
+    # Padrões de quantidade (Ex: 2 pulseiras)
+    match_acessorios = re.search(r'\d+\s*(pulseiras|fones|películas|peliculas|capas|case|tiras)', titulo_limpo)
+    
+    # Palavras-chave de itens extras
+    itens_adicionais = ['brinde', 'kit', 'combo', 'fone bluetooth', 'cabo', 'fonte']
+    tem_item_extra = any(k in titulo_limpo for k in itens_adicionais)
+
+    # 3. FILTRO FINAL DE SEGURANÇA
+    # Se ainda sobrou um sinal, mas o título é carregado de termos técnicos e não tem "kit/brinde"
+    if tem_sinal and not tem_item_extra and not bool(match_acessorios):
+        termos_specs = ['nfc', '5g', '4g', 'dual', 'sim', 'mah', 'bateria', 'biometria', 'nfe', 'camera', 'samsung xiaomi', 'ganfast', 'mp']
+        if any(t in titulo_limpo for t in termos_specs):
+            # Se só sobrou o sinal de + mas não detectamos um item claro, assumimos que é spec residual
             return False
 
     return bool(match_acessorios) or tem_item_extra or tem_sinal
