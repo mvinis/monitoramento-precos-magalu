@@ -52,3 +52,18 @@ def test_samsung_b310e_deve_ser_celular_basico(ia):
     
     # Valida se a inteligência (IA ou IFs) pegou que é um celular básico
     assert "Celular Básico" in resultado['produto']['categoria']
+
+def test_insumo_reparo_nao_deve_ser_celular(ia):
+    contexto = {"timestamp": "2026-01-21", "versao_pipeline": "1.0", "ambiente": "dev", "tipo_coleta": "teste", "loja": "Teste", "canal_venda": "PLATAFORMA", "url_produto": "http://teste.com", "pagina": 1}
+    
+    dado_mocado = {
+        "id_produto": "123000",
+        "titulo": "Kit 2 Cola Adesiva Branca e Preta P/ Display Celulares 15ml - OEM",
+        "preco_atual": 25.00
+    }
+
+    resultado = montar_objeto_produto(dado_mocado, contexto, classificador_ai=ia)
+    categoria = resultado['produto']['categoria']
+
+    # O ASSERT: Esperamos que NÃO seja Celular Básico e nem Smartphone
+    assert categoria == "Outros", f"Erro! Insumo foi classificado erroneamente como {categoria}"

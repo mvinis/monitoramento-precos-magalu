@@ -6,8 +6,7 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
     Transforma dados brutos em um objeto estruturado (Schema VIP).
     Mantém a integridade das chaves originais com lógica de classificação híbrida.
     """
-    
-    # --- 1. EXTRAÇÃO E TIPAGEM (SEUS CAMPOS ORIGINAIS) ---
+    # --- 1. EXTRAÇÃO E TIPAGEM ---
     p_original = dados_brutos.get('preco_antigo', 0)
     p_pix = dados_brutos.get('preco_pix', 0)
     p_credito_avista = dados_brutos.get('preco_atual', 0) 
@@ -17,106 +16,122 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
     is_bundle_final = detectar_bundle(titulo_raw)
 
     logging.info(f"--- Processando: {titulo_raw[:50]}... ---")
+
+    # --- NOVO: BLOCO 0 - FILTRO DE INSUMOS E REPARO (Ajustado) ---
+    if any(k in titulo_low for k in ['cola', 'adesivo', 'resina', 'ferramenta', 'limpeza', 'reparo']):
+        categoria_base = "Outros"
     
-    # Captura a posição das palavras-chave de Hardware para comparar
-    pos_hw = -1
-    for k in ['iphone', 'smartphone', 'galaxy', 'motorola', 'redmi', 'poco', 'xiaomi']:
-        p = titulo_low.find(k)
-        if p != -1 and (pos_hw == -1 or p < pos_hw):
-            pos_hw = p
-
-    # BLOCO 1: ACESSÓRIOS E ENERGIA (Verificamos se eles vêm ANTES do Hardware)
-    
-    # 1.1 Energia
-    if any(k in titulo_low for k in ['carregador', 'cabo', 'fonte', 'adaptador', 'power bank']):
-        pos_acc = min([titulo_low.find(k) for k in ['carregador', 'cabo', 'fonte', 'adaptador', 'power bank'] if titulo_low.find(k) != -1])
-        if pos_hw == -1 or pos_acc < pos_hw:
-            categoria_base = "Carregador"
-        else:
-            categoria_base = "Smartphone"
-
-    # 1.2 Proteção e Estética
-    elif any(k in titulo_low for k in ['capa', 'capinha', 'película', 'pelicula', 'case', 'pulseira', 'smarttag', 'airtag', 'rastreador', 'localizador']):
-        pos_acc = min([titulo_low.find(k) for k in ['capa', 'capinha', 'película', 'pelicula', 'case', 'pulseira', 'smarttag', 'rastreador', 'airtag', 'rastreador', 'localizador'] if titulo_low.find(k) != -1])
-        if pos_hw == -1 or pos_acc < pos_hw:
-            categoria_base = "Acessório" if 'pulseira' in titulo_low else "Proteção"
-        else:
-            categoria_base = "Smartphone"
-
-    # 1.3 Suportes e Estabilizadores (NOVO)
-    # Adicionamos gatilhos como 'tripé', 'bastão', 'estabilizador'
-    elif any(k in titulo_low for k in ['suporte', 'tripe', 'tripé', 'bastão', 'pau de selfie', 'estabilizador', 'ring light']):
-        termos_sup = ['suporte', 'tripe', 'tripé', 'bastão', 'pau de selfie', 'estabilizador', 'ring light']
-        pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
-        
-        # Se o termo 'suporte' vier antes do nome da marca/hardware, é um Suporte.
-        if pos_hw == -1 or pos_acc < pos_hw:
-            categoria_base = "Suporte"
-        else:
-            categoria_base = "Smartphone"
-
-    # Mova este bloco para cima do bloco de Celular
-    elif any(k in titulo_low for k in ['óculos', 'oculos', 'vr', 'realidade virtual', 'óculos 3d', '3d']):
-        categoria_base = "Óculos Inteligente"
-
-    # Mova este bloco para cima do bloco de Celular
-    elif any(k in titulo_low for k in ['gamepad', 'joystick', 'playstation', 'xbox', 'nintendo', 'pc gamer', 'ps']):
-        categoria_base = "Console"
-    
-    # CELULAR
-    elif any(k in titulo_low for k in ['celular', 'celular antigo', '2g']):
-        termos_sup = ['celular', 'celular antigo', '2g']
-        pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
-        
-        # Se o termo 'suporte' vier antes do nome da marca/hardware, é um Suporte.
-        if pos_hw == -1 or pos_acc < pos_hw:
-            categoria_base = "Celular Básico"
-        else:
-            categoria_base = "Smartphone"
-    
-    elif any(k in titulo_low for k in ['relógio', 'relogio', 'watch', 'smartwatch', 'hw5', 'w28']):
-        categoria_base = "Smartwatch"
-
-    elif any(k in titulo_low for k in ['smartband', 'mi band', 'fitband', 'band', 'm3', 'm4', 'fit']):
-        termos_sup = ['smartband', 'mi band', 'fitband', 'band', 'm3', 'm4', 'fit']
-        pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
-        
-        # Se o termo 'suporte' vier antes do nome da marca/hardware, é um Suporte.
-        if pos_hw == -1 or pos_acc < pos_hw:
-            categoria_base = "Smartband"
-        else:
-            categoria_base = "Smartphone"
-    
-    elif any(k in titulo_low for k in ['chip', 'pre-pago', 'pré-pago', 'pre pago', 'smart card', 'microchip', 'minichip', 'nanochip', 'cartão sim']):
-        termos_sup = ['chip', 'pre-pago', 'pré-pago', 'pre pago']
-        pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
-        
-        if pos_hw == -1 or pos_acc < pos_hw:
-            categoria_base = "Chip"
-        else:
-            categoria_base = "Smartphone"
-
-    # BLOCO 2: HARDWARE DIRETO (Quando não há acessório no título ou o Hardware veio primeiro)
-    elif pos_hw != -1 or any(k in titulo_low for k in ['smartphone', 'smarphone', 'smart phone', 'not', 'x7', 'redmi note', 'realme', 'C61', 'lg k', 'motorola', '14 pro', '15 pro', '13 pro', '12 pro']):
-        categoria_base = "Smartphone"
-
-    elif any(k in titulo_low for k in ['celular', 'celular antigo', '2g', 'telefone']):
-        categoria_base = "Celular Básico"
-
-    # BLOCO 3: IA (A rede de segurança final)
     else:
-        if classificador_ai:
-            categoria_base = classificador_ai.classificar(titulo_raw)
-        else:
-            categoria_base = "Outros"
+        # MUDANÇA 1: Expandimos a lista para capturar a posição de Relógios também
+        termos_hardware_geral = [
+            'iphone', 'smartphone', 'galaxy', 'motorola', 'redmi', 'poco', 'xiaomi',
+            'relógio', 'relogio', 'watch', 'smartwatch', 'hw5', 'w28', 's10', 'fitband'
+        ]
+        
+        pos_hw = -1
+        for k in termos_hardware_geral:
+            p = titulo_low.find(k)
+            if p != -1 and (pos_hw == -1 or p < pos_hw):
+                pos_hw = p
 
-    # --- 3. LÓGICA DE BUNDLE (CONSTRUÇÃO DA STRING FINAL) ---
+        # --- 2. HIERARQUIA DE CATEGORIZAÇÃO ---
+        
+        # 1.1 Energia
+        if any(k in titulo_low for k in ['carregador', 'cabo', 'fonte', 'adaptador', 'power bank']):
+            pos_acc = min([titulo_low.find(k) for k in ['carregador', 'cabo', 'fonte', 'adaptador', 'power bank'] if titulo_low.find(k) != -1])
+            if pos_hw == -1 or pos_acc < pos_hw:
+                categoria_base = "Carregador"
+            else:
+                if any(w in titulo_low for w in ['watch', 'relógio', 'relogio', 'hw5', 'w28']):
+                    categoria_base = "Smartwatch"
+                else:
+                    categoria_base = "Smartphone"
+
+        # 1.2 Proteção e Estética
+        elif any(k in titulo_low for k in ['capa', 'capinha', 'película', 'pelicula', 'case', 'pulseira', 'smarttag', 'airtag', 'rastreador', 'localizador']):
+            pos_acc = min([titulo_low.find(k) for k in ['capa', 'capinha', 'película', 'pelicula', 'case', 'pulseira', 'smarttag', 'airtag', 'rastreador', 'localizador'] if titulo_low.find(k) != -1])
+            
+            if pos_hw == -1 or pos_acc < pos_hw:
+                categoria_base = "Acessório" if 'pulseira' in titulo_low else "Proteção"
+            else:
+                if any(w in titulo_low for w in ['watch', 'relógio', 'relogio', 'hw5', 'w28', 's10']):
+                    categoria_base = "Smartwatch"
+                else:
+                    categoria_base = "Smartphone"
+
+        # 1.3 Suportes e Estabilizadores
+        elif any(k in titulo_low for k in ['suporte', 'tripe', 'tripé', 'bastão', 'pau de selfie', 'estabilizador', 'ring light']):
+            termos_sup = ['suporte', 'tripe', 'tripé', 'bastão', 'pau de selfie', 'estabilizador', 'ring light']
+            pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
+            
+            if pos_hw == -1 or pos_acc < pos_hw:
+                categoria_base = "Suporte"
+            else:
+                if any(w in titulo_low for w in ['watch', 'relógio', 'relogio', 'hw5', 'w28']):
+                    categoria_base = "Smartwatch"
+                else:
+                    categoria_base = "Smartphone"
+
+        elif any(k in titulo_low for k in ['óculos', 'oculos', 'vr', 'realidade virtual', 'óculos 3d', '3d']):
+            categoria_base = "Óculos Inteligente"
+
+        elif any(k in titulo_low for k in ['gamepad', 'joystick', 'playstation', 'xbox', 'nintendo', 'pc gamer', 'ps']):
+            categoria_base = "Console"
+        
+        elif any(k in titulo_low for k in ['celular', 'celular antigo', '2g']):
+            termos_sup = ['celular', 'celular antigo', '2g']
+            pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
+            if pos_hw == -1 or pos_acc < pos_hw:
+                categoria_base = "Celular Básico"
+            else:
+                categoria_base = "Smartphone"
+        
+        elif any(k in titulo_low for k in ['relógio', 'relogio', 'watch', 'smartwatch', 'hw5', 'w28']):
+            categoria_base = "Smartwatch"
+
+        elif any(k in titulo_low for k in ['smartband', 'mi band', 'fitband', 'band', 'm3', 'm4', 'fit']):
+            termos_sup = ['smartband', 'mi band', 'fitband', 'band', 'm3', 'm4', 'fit']
+            pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
+            if pos_hw == -1 or pos_acc < pos_hw:
+                categoria_base = "Smartband"
+            else:
+                categoria_base = "Smartphone"
+        
+        elif any(k in titulo_low for k in ['chip', 'pre-pago', 'pré-pago', 'pre pago', 'smart card', 'microchip', 'minichip', 'nanochip', 'cartão sim']):
+            termos_sup = ['chip', 'pre-pago', 'pré-pago', 'pre pago']
+            pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
+            if pos_hw == -1 or pos_acc < pos_hw:
+                categoria_base = "Chip"
+            else:
+                categoria_base = "Smartphone"
+
+        # BLOCO 2: HARDWARE DIRETO
+        elif pos_hw != -1 or any(k in titulo_low for k in ['smartphone', 'smarphone', 'smart phone', 'not', 'x7', 'redmi note', 'realme', 'C61', 'lg k', 'motorola', '14 pro', '15 pro', '13 pro', '12 pro']):
+            if any(w in titulo_low for w in ['watch', 'relógio', 'relogio', 'hw5', 'w28']):
+                categoria_base = "Smartwatch"
+            else:
+                categoria_base = "Smartphone"
+
+        elif any(k in titulo_low for k in ['celular', 'celular antigo', '2g', 'telefone']):
+            categoria_base = "Celular Básico"
+
+        elif any(k in titulo_low for k in ['relógio', 'relogio', 'watch', 'smartwatch']):
+            categoria_base = "Smartwatch"
+
+        # BLOCO 3: IA
+        else:
+            if classificador_ai:
+                categoria_base = classificador_ai.classificar(titulo_raw)
+            else:
+                categoria_base = "Outros"
+
+    # --- 3. LÓGICA DE BUNDLE (Executada para TODOS, incluindo a Cola) ---
     if is_bundle_final:
         categoria = montar_string_bundle(categoria_base, titulo_low)
     else:
         categoria = categoria_base
 
-    # --- 4. CÁLCULOS FINANCEIROS (MANTIDOS) ---
+    # --- 4. CÁLCULOS FINANCEIROS ---
     valor_absoluto_desc = 0
     percentual_desc = 0
     if p_original > p_credito_avista and p_original > 0:
@@ -128,7 +143,7 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
     parcelas_max = int(match_parc.group(1)) if match_parc else 1
     valor_parcela = round(p_credito_avista / parcelas_max, 2) if parcelas_max > 0 else p_credito_avista
 
-    # --- 5. CONSTRUÇÃO DO OBJETO FINAL (SCHEMA VIP RESTAURADO) ---
+    # --- 5. CONSTRUÇÃO DO OBJETO FINAL (Schema VIP) ---
     return {
         "metadata": {
             "timestamp_coleta": contexto['timestamp'],
@@ -226,7 +241,7 @@ def detectar_bundle(titulo):
     # 3. FILTRO FINAL DE SEGURANÇA
     # Se ainda sobrou um sinal, mas o título é carregado de termos técnicos e não tem "kit/brinde"
     if tem_sinal and not tem_item_extra and not bool(match_acessorios):
-        termos_specs = ['nfc', '5g', '4g', 'dual', 'sim', 'mah', 'bateria', 'biometria', 'nfe', 'camera', 'samsung xiaomi', 'ganfast', 'mp']
+        termos_specs = ['nfc', 'nf', 'gb', 'mb', '5g', '4g', 'dual', 'sim', 'mah', 'bateria', 'biometria', 'nfe', 'camera', 'samsung xiaomi', 'ganfast', 'mp']
         if any(t in titulo_limpo for t in termos_specs):
             # Se só sobrou o sinal de + mas não detectamos um item claro, assumimos que é spec residual
             return False

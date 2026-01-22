@@ -31,6 +31,7 @@ def test_falsos_positivos_tecnicos():
     assert detectar_bundle('Smartphone Xiaomi POCO X7 256GB 8GB RAM tela de 6.67" camera 50+8+2MP 20MP') is False
     assert detectar_bundle("Carregador Turbo 125w USB-C Compatível com Xiaomi Samsung Motorola Quick Charger + GaNFast Moto G53 G54 Edge 30 40 50 - Tx - Original") is False
     assert detectar_bundle("Smartphone Motorola Moto G15, 50 MP + 5 MP, 256 GB, 4G, Verde - XT2521-2") is False
+    assert detectar_bundle("Smartphone POCO C75 8+GB RAM 256GB, Preto - XIAOMI") is False
 
 def test_bundles_reais():
     """Testa se combos verdadeiros SÃO detectados corretamente."""
@@ -39,3 +40,4 @@ def test_bundles_reais():
     assert detectar_bundle("iPhone 15 com Brinde Capinha e Película") is True
     assert detectar_bundle("Combo Gamer: Mouse + Teclado") is True
     assert detectar_bundle("Relógio + 7 Pulseiras") is True
+    
