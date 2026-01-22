@@ -67,3 +67,17 @@ def test_insumo_reparo_nao_deve_ser_celular(ia):
 
     # O ASSERT: Esperamos que NÃO seja Celular Básico e nem Smartphone
     assert categoria == "Outros", f"Erro! Insumo foi classificado erroneamente como {categoria}"
+
+def test_suporte_garra_nao_deve_ser_carregador(ia):
+    contexto = {"timestamp": "2026-01-21", "versao_pipeline": "1.0", "ambiente": "dev", "tipo_coleta": "teste", "loja": "Teste", "canal_venda": "PLATAFORMA", "url_produto": "http://teste.com", "pagina": 1}
+    
+    dado_mocado = {
+        "id_produto": "012345",
+        "titulo": "Suporte Garra Celular P/ Motos Universal Com Carregador Usb - +BR",
+        "preco_atual": 10.00
+    }
+
+    resultado = montar_objeto_produto(dado_mocado, contexto, classificador_ai=ia)
+    categoria = resultado['produto']['categoria']
+
+    assert categoria == "Suporte", f"Erro! Insumo foi classificado erroneamente como {categoria}"

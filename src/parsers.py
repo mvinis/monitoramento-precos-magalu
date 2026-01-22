@@ -36,31 +36,8 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
 
         # --- 2. HIERARQUIA DE CATEGORIZAÇÃO ---
         
-        # 1.1 Energia
-        if any(k in titulo_low for k in ['carregador', 'cabo', 'fonte', 'adaptador', 'power bank']):
-            pos_acc = min([titulo_low.find(k) for k in ['carregador', 'cabo', 'fonte', 'adaptador', 'power bank'] if titulo_low.find(k) != -1])
-            if pos_hw == -1 or pos_acc < pos_hw:
-                categoria_base = "Carregador"
-            else:
-                if any(w in titulo_low for w in ['watch', 'relógio', 'relogio', 'hw5', 'w28']):
-                    categoria_base = "Smartwatch"
-                else:
-                    categoria_base = "Smartphone"
-
-        # 1.2 Proteção e Estética
-        elif any(k in titulo_low for k in ['capa', 'capinha', 'película', 'pelicula', 'case', 'pulseira', 'smarttag', 'airtag', 'rastreador', 'localizador']):
-            pos_acc = min([titulo_low.find(k) for k in ['capa', 'capinha', 'película', 'pelicula', 'case', 'pulseira', 'smarttag', 'airtag', 'rastreador', 'localizador'] if titulo_low.find(k) != -1])
-            
-            if pos_hw == -1 or pos_acc < pos_hw:
-                categoria_base = "Acessório" if 'pulseira' in titulo_low else "Proteção"
-            else:
-                if any(w in titulo_low for w in ['watch', 'relógio', 'relogio', 'hw5', 'w28', 's10']):
-                    categoria_base = "Smartwatch"
-                else:
-                    categoria_base = "Smartphone"
-
-        # 1.3 Suportes e Estabilizadores
-        elif any(k in titulo_low for k in ['suporte', 'tripe', 'tripé', 'bastão', 'pau de selfie', 'estabilizador', 'ring light']):
+        # 1.1 Suportes e Estabilizadores
+        if any(k in titulo_low for k in ['suporte', 'tripe', 'tripé', 'bastão', 'pau de selfie', 'estabilizador', 'ring light']):
             termos_sup = ['suporte', 'tripe', 'tripé', 'bastão', 'pau de selfie', 'estabilizador', 'ring light']
             pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
             
@@ -72,12 +49,38 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
                 else:
                     categoria_base = "Smartphone"
 
+        # 1.2 Energia
+        elif any(k in titulo_low for k in ['carregador', 'cabo', 'fonte', 'adaptador', 'power bank']):
+            pos_acc = min([titulo_low.find(k) for k in ['carregador', 'cabo', 'fonte', 'adaptador', 'power bank'] if titulo_low.find(k) != -1])
+            if pos_hw == -1 or pos_acc < pos_hw:
+                categoria_base = "Carregador"
+            else:
+                if any(w in titulo_low for w in ['watch', 'relógio', 'relogio', 'hw5', 'w28']):
+                    categoria_base = "Smartwatch"
+                else:
+                    categoria_base = "Smartphone"
+
+        # 1.3 Proteção e Estética
+        elif any(k in titulo_low for k in ['capa', 'capinha', 'película', 'pelicula', 'case', 'pulseira', 'smarttag', 'airtag', 'rastreador', 'localizador']):
+            pos_acc = min([titulo_low.find(k) for k in ['capa', 'capinha', 'película', 'pelicula', 'case', 'pulseira', 'smarttag', 'airtag', 'rastreador', 'localizador'] if titulo_low.find(k) != -1])
+            
+            if pos_hw == -1 or pos_acc < pos_hw:
+                categoria_base = "Acessório" if 'pulseira' in titulo_low else "Proteção"
+            else:
+                if any(w in titulo_low for w in ['watch', 'relógio', 'relogio', 'hw5', 'w28', 's10']):
+                    categoria_base = "Smartwatch"
+                else:
+                    categoria_base = "Smartphone"
+
+        # 1.4 Óculos Inteligente
         elif any(k in titulo_low for k in ['óculos', 'oculos', 'vr', 'realidade virtual', 'óculos 3d', '3d']):
             categoria_base = "Óculos Inteligente"
 
+        # 1.5 Videogame (físico)
         elif any(k in titulo_low for k in ['gamepad', 'joystick', 'playstation', 'xbox', 'nintendo', 'pc gamer', 'ps']):
             categoria_base = "Console"
         
+        # 1.5 Celular Básico (apenas funções básicas)
         elif any(k in titulo_low for k in ['celular', 'celular antigo', '2g']):
             termos_sup = ['celular', 'celular antigo', '2g']
             pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
@@ -86,9 +89,11 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
             else:
                 categoria_base = "Smartphone"
         
+        # 1.6 Relógio Inteligente (contém várias funções)
         elif any(k in titulo_low for k in ['relógio', 'relogio', 'watch', 'smartwatch', 'hw5', 'w28']):
             categoria_base = "Smartwatch"
 
+        # 1.7 Smartband (contém funções básicas. smartband != smartwatch)
         elif any(k in titulo_low for k in ['smartband', 'mi band', 'fitband', 'band', 'm3', 'm4', 'fit']):
             termos_sup = ['smartband', 'mi band', 'fitband', 'band', 'm3', 'm4', 'fit']
             pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
@@ -97,6 +102,7 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
             else:
                 categoria_base = "Smartphone"
         
+        # 1.8 Chip
         elif any(k in titulo_low for k in ['chip', 'pre-pago', 'pré-pago', 'pre pago', 'smart card', 'microchip', 'minichip', 'nanochip', 'cartão sim']):
             termos_sup = ['chip', 'pre-pago', 'pré-pago', 'pre pago']
             pos_acc = min([titulo_low.find(k) for k in termos_sup if titulo_low.find(k) != -1])
@@ -111,12 +117,6 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
                 categoria_base = "Smartwatch"
             else:
                 categoria_base = "Smartphone"
-
-        elif any(k in titulo_low for k in ['celular', 'celular antigo', '2g', 'telefone']):
-            categoria_base = "Celular Básico"
-
-        elif any(k in titulo_low for k in ['relógio', 'relogio', 'watch', 'smartwatch']):
-            categoria_base = "Smartwatch"
 
         # BLOCO 3: IA
         else:
@@ -241,7 +241,7 @@ def detectar_bundle(titulo):
     # 3. FILTRO FINAL DE SEGURANÇA
     # Se ainda sobrou um sinal, mas o título é carregado de termos técnicos e não tem "kit/brinde"
     if tem_sinal and not tem_item_extra and not bool(match_acessorios):
-        termos_specs = ['nfc', 'nf', 'gb', 'mb', '5g', '4g', 'dual', 'sim', 'mah', 'bateria', 'biometria', 'nfe', 'camera', 'samsung xiaomi', 'ganfast', 'mp']
+        termos_specs = ['br', 'nfc', 'nf', 'gb', 'mb', '5g', '4g', 'dual', 'sim', 'mah', 'bateria', 'biometria', 'nfe', 'camera', 'samsung xiaomi', 'ganfast', 'mp']
         if any(t in titulo_limpo for t in termos_specs):
             # Se só sobrou o sinal de + mas não detectamos um item claro, assumimos que é spec residual
             return False
