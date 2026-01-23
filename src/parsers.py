@@ -248,11 +248,38 @@ def detectar_bundle(titulo):
 
     return bool(match_acessorios) or tem_item_extra or tem_sinal
 
+# FUNÇÕES DATA CLEANER
+
 def normalizar_texto(texto):
+
+    """
+    Higieniza strings removendo artefatos comuns de web scraping.
+    
+    Substitui espaços não-quebráveis (Unicode \xa0) por espaços padrão
+    e remove espaços em branco sobressalentes nas extremidades.
+
+    Args:
+        texto (str): String bruta capturada do HTML.
+    Returns:
+        str: Texto normalizado ou "N/A" caso a entrada seja nula/vazia.
+    """
+
     if not texto: return "N/A"
     return texto.replace('\xa0', ' ').strip()
 
 def limpar_valor_simples_para_float(texto):
+
+    """
+    Converte strings monetárias (R$ 1.299,50) em float (1299.5).
+    
+    Trata separadores de milhar, decimais brasileiros e limpa caracteres 
+    invisíveis, servindo como camada de Data Quality do pipeline.
+    
+    Args:
+        texto (str): Texto bruto do scraping.
+    Returns:
+        float: Valor convertido ou 0.0 em caso de erro/N/A.
+    """
 
     if not texto or "N/A" in texto: return 0.0
     try:

@@ -24,6 +24,7 @@ def test_falsos_positivos_memoria_ram():
 
 def test_falsos_positivos_tecnicos():
     """Testa se termos técnicos com sinais NÃO são detectadas como bundle."""
+    # Alguns produtos que deram problemas com seu "+"
     assert detectar_bundle("Smartphone com NFC + Bluetooth") is False
     assert detectar_bundle("Celular Dual Sim + 4G") is False
     assert detectar_bundle("Smartphone Samsung Galaxy A16 128GB Verde Claro 5G 4GB RAM 6,7\" FHD+ Câm Tripla até 50MP + Selfie 13MP Bateria 5000mAh") is False
