@@ -14,11 +14,11 @@ O robô utiliza uma estrutura de **Buffer & Parsing**, garantindo que o dado sej
 graph TD
     %% Estilos
     classDef start fill:#a5d6a7,stroke:#333,color:#000,font-weight:bold;
-    classDef process fill:#90caf9,stroke:#33,stroke-width:1px;
-    classDef decision fill:#fff4dd,stroke:#d4a017,stroke-width:2px;
-    classDef error fill:#ffcdd2,stroke:#f66,stroke-width:1px;
-    classDef storage fill:#eeeeee,stroke:#33,stroke-width:2px;
-    classDef final fill:#fbb, stroke:#333, color:#000, font-weight:bold;
+    classDef process fill:#90caf9,stroke:#333,color:#000,stroke-width:1px;
+    classDef decision fill:#fff4dd,stroke:#d4a017,color:#000,stroke-width:2px;
+    classDef error fill:#ffcdd2,stroke:#f66,color:#000,stroke-width:1px;
+    classDef storage fill:#eeeeee,stroke:#333,color:#000,stroke-width:2px;
+    classDef final fill:#fbb,stroke:#333,color:#000,font-weight:bold;
 
     Start((Início)):::start --> Config[Definir URL Inicial e<br/>Inicializar Buffer]:::process
 
