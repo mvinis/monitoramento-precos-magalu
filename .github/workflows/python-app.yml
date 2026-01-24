@@ -25,7 +25,15 @@ jobs:
           # Isso instala o seu próprio código como um módulo reconhecível
           pip install -e .
 
-      - name: Run Tests (Data Quality & AI Logic)
+      - name: Debug - Listar Arquivos
         run: |
-          # O segredo: rodar o pytest apontando para a raiz através do python -m
-          PYTHONPATH=.:src python -m pytest tests/ -v
+          echo "Onde eu estou agora?"
+          pwd
+          echo "Quais pastas eu consigo ver na raiz?"
+          ls -F
+          echo "Eu consigo ver o que tem dentro de src/models?"
+          ls -R src/
+
+      # - name: Run Tests (Data Quality & AI Logic)
+      #   run: |
+      #     PYTHONPATH=.:src python -m pytest tests/ -v
