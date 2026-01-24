@@ -25,4 +25,4 @@ jobs:
 
       - name: Run Tests (Data Quality & AI Logic)
         run: |
-          run: pytest tests/ -v
+          pytest tests/ -v
