@@ -23,7 +23,8 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Run Tests (Data Quality & AI Logic)
+      - name: Run Tests
         run: |
-          # Usamos o python -m pytest para garantir que a pasta src seja reconhecida
           python -m pytest tests/ -v
+        env:
+          PYTHONPATH: ${{ github.workspace }}
