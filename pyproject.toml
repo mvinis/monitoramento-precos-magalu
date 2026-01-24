@@ -1,3 +1,9 @@
+[project]
+name = "monitoramento-precos-magalu"
+version = "1.0.0"
+description = "Pipeline de monitoramento de preços com IA"
+dependencies = []
+
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
