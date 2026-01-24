@@ -27,4 +27,5 @@ jobs:
 
       - name: Run Tests (Data Quality & AI Logic)
         run: |
-          python -m pytest tests/ -v
+          # O segredo: rodar o pytest apontando para a raiz através do python -m
+          PYTHONPATH=.:src python -m pytest tests/ -v
