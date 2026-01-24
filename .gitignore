@@ -15,7 +15,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 .cache/
-models/
 
 # --- IDEs e Sistema ---
 .vscode/
