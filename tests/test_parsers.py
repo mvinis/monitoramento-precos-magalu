@@ -18,7 +18,7 @@ def test_limpar_valor_vazio():
 
 def test_falsos_positivos_memoria_ram():
     """Testa se especificações de RAM NÃO são detectadas como bundle."""
-    # O sinal de '+' aqui é técnico, não deve ser bundle
+    # O sinal de '+' é técnico, não deve ser bundle
     assert detectar_bundle("Xiaomi Redmi 14C 256GB 4+4GB RAM") is False
     assert detectar_bundle("Motorola Moto G54 8GB+8GB RAM Boost") is False
     assert detectar_bundle("Smartphone 128GB + 6GB RAM") is False
@@ -46,44 +46,58 @@ def test_bundles_reais():
     assert detectar_bundle("Relógio + 7 Pulseiras") is True
     assert detectar_bundle("Relógio digital Smart inteligente Hw12 41mm com pulseira metal extra - Smart Bracelet") is True
 
-def test_prioridade_acessorio_com_nome_de_celular():
-    """Valida se acessórios para celulares específicos são categorizados como acessórios."""
+def test_match_categorias():
+    """
+    Valida a lógica de classificação de produtos (Hardware vs Acessórios).
+
+    Este teste garante que a função `categorizar_produto` aplique corretamente as 
+    regras de regex e travas de preço para distinguir produtos com nomes similares.
+
+    Cenários Cobertos:
+    ------------------
+    1. Proteção: Garante que capas/cases não sejam confundidas com o aparelho.
+    2. Acessórios: Valida se pulseiras (baratas) são separadas dos relógios.
+    3. Smartwatch Genérico: Testa se um relógio barato (mas acima do corte de acessório) 
+       é mantido como Hardware e não descartado.
+    4. Celular Básico: Verifica a detecção de Feature Phones (Nokia, etc).
+    5. Smartwatch Infantil: Garante que relógios de crianças (com GPS/Chip) sejam 
+       classificados como Hardware, apesar do preço baixo.
+
+    Raises:
+        AssertionError: Se a categoria retornada for diferente da esperada.
+    """
     
-    # Caso 1: Capa com nome de celular forte
     titulo_capa = "Capa Protetora Anti Impacto edge 60 e edge 60 fusion - Motorola"
     assert categorizar_produto(titulo_capa.lower(), titulo_capa, 89.10) == "Proteção"
     
-    # Caso 2: Pulseira barata com nome de smartwatch
     titulo_pulseira = "Pulseira Relógio Smartwatch Compatível D20 D13 Y68"
     assert categorizar_produto(titulo_pulseira.lower(), titulo_pulseira, 9.21) == "Acessório"
 
-    titulo_a = "Relógio Inteligente Para Vivo V21 - generico"
-    assert categorizar_produto(titulo_a.lower(), titulo_a, 189) == "Smartwatch"
+    titulo_relogio_smartwatch = "Relógio Inteligente Para Vivo V21 - generico"
+    assert categorizar_produto(titulo_relogio_smartwatch.lower(), titulo_relogio_smartwatch, 189) == "Smartwatch"
 
-    titulo_c = "Celular 150 4G Dual Chip Com Câmera lançamento 4G - nokia"
-    assert categorizar_produto(titulo_c.lower(), titulo_c, 299.0) == "Celular Básico"
+    titulo_celular_basico = "Celular 150 4G Dual Chip Com Câmera lançamento 4G - nokia"
+    assert categorizar_produto(titulo_celular_basico.lower(), titulo_celular_basico, 299.0) == "Celular Básico"
 
-    titulo_d = "Relógio SmartWatch Infantil Com Rastreador GPS Chip e Câmera - Plus Distribuidora"
-    assert categorizar_produto(titulo_d.lower(), titulo_d, 111.06) == "Smartwatch"
+    titulo_smartwatch_infantil = "Relógio SmartWatch Infantil Com Rastreador GPS Chip e Câmera - Plus Distribuidora"
+    assert categorizar_produto(titulo_smartwatch_infantil.lower(), titulo_smartwatch_infantil, 111.06) == "Smartwatch"
 
 def test_detectar_bundle_relogio_pulseira():
     titulo = "Relógio digital Smart inteligente Hw12 41mm com pulseira metal extra - Smart Bracelet"
     titulo_low = titulo.lower()
     preco = 158.64
 
-    # 1. Primeiro descobre o item principal (O que você estava testando antes)
+    # 1. Primeiro descobre o item principal
     cat_base = categorizar_produto(titulo_low, titulo, preco)
     assert cat_base == "Smartwatch"  # Isso deve ser verdade
 
-    # 2. Agora aplica a lógica de Bundle (O que faltava no teste)
-    # A função montar_string_bundle precisa da categoria base para funcionar
+    # 2. Agora aplica a lógica de Bundle
     resultado_final = montar_string_bundle(cat_base, titulo_low)
 
-    # 3. Agora sim, verificamos a soma
+    # 3. Verifica conjunto
     assert "Smartwatch" in resultado_final
     assert "Acessório" in resultado_final
     
-    # Se quiser ser estrito na formatação:
     partes = resultado_final.split(" + ")
     assert set(partes) == {"Smartwatch", "Acessório"}
 
@@ -92,21 +106,18 @@ def test_detectar_bundle_garrafa_smartwatch_fone():
     titulo_low = titulo.lower()
     preco = 127
 
-    # 1. Primeiro descobre o item principal (O que você estava testando antes)
+    # 1. Primeiro descobre o item principal
     cat_base = categorizar_produto(titulo_low, titulo, preco)
-    assert cat_base == "Smartwatch"  # Isso deve ser verdade
+    assert cat_base == "Smartwatch"
 
     # 2. Agora aplica a lógica de Bundle (O que faltava no teste)
-    # A função montar_string_bundle precisa da categoria base para funcionar
     resultado_final = montar_string_bundle(cat_base, titulo_low)
 
-    # 3. Agora sim, verificamos a soma
+    # 3. Verifica conjunto
     assert "Smartwatch" in resultado_final
     assert "Acessório" in resultado_final
     assert "Áudio" in resultado_final
-    
-    # Se quiser ser estrito na formatação:
+
     partes = resultado_final.split(" + ")
     assert set(partes) == {"Smartwatch", "Acessório", "Áudio"}
-    
     

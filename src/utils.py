@@ -23,7 +23,6 @@ def configurar_logs():
     logger.setLevel(logging.INFO)
 
     # --- HANDLER 1: ARQUIVO (Texto Puro, Completo) ---
-    # Aqui não usamos cores, pois arquivos de texto não leem cores ANSI bem.
     file_handler = logging.FileHandler("data/logs/scraping.log", encoding='utf-8')
     file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     file_handler.setFormatter(file_formatter)
@@ -33,7 +32,7 @@ def configurar_logs():
     console_handler = logging.StreamHandler()
     console_formatter = colorlog.ColoredFormatter(
         "%(cyan)s%(asctime)s%(reset)s - %(log_color)s%(levelname)-8s%(reset)s - %(message)s",
-        datefmt='%H:%M:%S', # No terminal, só a hora basta (economiza espaço)
+        datefmt='%H:%M:%S',
         reset=True,
         log_colors={
             'DEBUG':    'cyan',
