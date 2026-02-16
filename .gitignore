@@ -6,8 +6,10 @@ env/
 
 # --- Pastas de Dados e Logs ---
 # Ignora o conteúdo de data, mas mantém a estrutura
-data/raw/*.json
+data/raw/json/*.json
+data/raw/xlsx/*.xlsx
 data/processed/*.json
+data/processed/*.xlsx
 *.log
 
 # --- Cache do Python e IA ---
