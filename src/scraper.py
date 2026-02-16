@@ -3,12 +3,17 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
+import colorlog
 import re
 import time
 import random
 import logging
 import hashlib
 from src.models.classifier import ProductClassifier
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 # Importação de ferramentas internas
 from src.parsers import (
@@ -18,9 +23,6 @@ from src.parsers import (
     montar_objeto_produto
 )
 from src.utils import obter_timestamp
-
-ia_instanciada = ProductClassifier()
-
 class MagaluScraper:
     def __init__(self, ambiente="dev", versao="1.0"):
         self.ambiente = ambiente
@@ -52,152 +54,516 @@ class MagaluScraper:
         """Encerra a instância do navegador e libera os recursos de memória do sistema."""
         if self.driver:
             self.driver.quit()
+    
+    def resolver_cor_da_variacao(self, url_produto):
+        """Entra na URL apenas para identificar a cor ativa e diferenciar o SKU."""
+        try:
+            self.driver.execute_script("window.open('');")
+            self.driver.switch_to.window(self.driver.window_handles[-1])
+            self.driver.get(url_produto)
+            
+            
+            # Espera o tempo do JavaScript preencher o atributo 'value'
+            time.sleep(3.5) 
+            
+            sopa = BeautifulSoup(self.driver.page_source, 'html.parser')
+            container = sopa.find('div', attrs={'type': 'color'})
+            
+            cor_final = "N/A"
+            if container:
+                # Tenta o selecionado (value), se não, o primeiro da lista (values)
+                cor_final = container.get('value') or container.get('values', '').split(',')[0] or "N/A"
+            
+            # id_variacao = MagaluScraper.extrair_sku_da_url(url_produto)
 
-    def coletar_produtos(self, max_paginas=None):
-        """
-        Executa o pipeline completo de coleta, extração e estruturação de dados.
+            self.driver.close()
+            self.driver.switch_to.window(self.driver.window_handles[0])
+            return cor_final.strip()
         
-        Este método coordena o ciclo de vida do scraper, navegando pela paginação do 
-        e-commerce, identificando cards de produtos e processando informações de 
-        preço, identidade e marketplace.
+        except Exception:
+            if len(self.driver.window_handles) > 1: self.driver.close()
+            self.driver.switch_to.window(self.driver.window_handles[0])
+            return "N/A"
 
-        O processo segue as etapas:
-        1. **Navegação**: Gerencia o loop de páginas com delays aleatórios para evitar bloqueios.
-        2. **Extração (Parsing)**: Utiliza BeautifulSoup para localizar elementos DOM (títulos, preços, links).
-        3. **Identificação de Marketplace**: Analisa parâmetros de URL (`seller_id`) para distinguir 
-           entre 'Venda Direta' (Magazine Luiza) e vendedores terceiros.
-        4. **Normalização**: Converte strings monetárias e textos Unicode em tipos primitivos (float/int).
-        5. **Estruturação (Schema VIP)**: Consolida os dados no formato final para ingestão em Data Lake.
+    def extrair_descricao_detalhada(self, url_produto, txt_produto):
+        """Abre o produto em uma nova aba, extrai a descrição e fecha a aba."""
+        logging.info(f"📡 Extraindo descrição do produto {txt_produto}")
+        try:
+            # Abre uma nova aba vazia
+            self.driver.execute_script("window.open('');")
+            # Alterna o foco para a nova aba (a última da lista)
+            self.driver.switch_to.window(self.driver.window_handles[-1])
+            
+            self.driver.get(url_produto)
+            # Tempo menor de espera pois o foco é apenas o texto
+            # time.sleep(random.uniform(2, 3)) 
+            # Espera um pouco mais para o JavaScript "preencher" a div
+            time.sleep(4)
+            
+            sopa_detalhe = BeautifulSoup(self.driver.page_source, 'html.parser')
+            # Localizador padrão da descrição na Magalu
+            desc_elem = sopa_detalhe.find('div', attrs={'data-testid': 'rich-content-container'})
+            
+            texto_desc = normalizar_texto(desc_elem.text) if desc_elem else "N/A"
+            
+            # Fecha a aba e volta para a aba principal (índice 0)
+            self.driver.close()
+            self.driver.switch_to.window(self.driver.window_handles[0])
+    
+            return texto_desc
+        except Exception as e:
+            logging.error(f"⚠️ Falha no Drill-down: {e}")
+            # Garante que voltamos para a aba principal mesmo em erro
+            if len(self.driver.window_handles) > 1:
+                self.driver.close()
+            self.driver.switch_to.window(self.driver.window_handles[0])
+            return "N/A"
 
-        Args:
-            max_paginas (int, optional): Limite de páginas para a coleta. 
-                Se for None, o scraper percorrerá todas as páginas disponíveis.
+    # def coletar_produtos(self, max_paginas=None):
+    #     """
+    #     Executa o pipeline completo de coleta, extração e estruturação de dados.
+        
+    #     Este método coordena o ciclo de vida do scraper, navegando pela paginação do 
+    #     e-commerce, identificando cards de produtos e processando informações de 
+    #     preço, identidade e marketplace.
 
-        Returns:
-            list[dict]: Uma lista de dicionários, onde cada item é um objeto de produto 
-                validado e estruturado conforme o Schema VIP.
+    #     O processo segue as etapas:
+    #     1. **Navegação**: Gerencia o loop de páginas com delays aleatórios para evitar bloqueios.
+    #     2. **Extração (Parsing)**: Utiliza BeautifulSoup para localizar elementos DOM (títulos, preços, links).
+    #     3. **Identificação de Marketplace**: Analisa parâmetros de URL (`seller_id`) para distinguir 
+    #        entre 'Venda Direta' (Magazine Luiza) e vendedores terceiros.
+    #     4. **Normalização**: Converte strings monetárias e textos Unicode em tipos primitivos (float/int).
+    #     5. **Estruturação (Schema VIP)**: Consolida os dados no formato final para ingestão em Data Lake.
 
-        Raises:
-            Exception: Captura e loga erros em nível de card ou página, garantindo que 
-                uma falha isolada não interrompa todo o pipeline (resiliência).
+    #     Args:
+    #         max_paginas (int, optional): Limite de páginas para a coleta. 
+    #             Se for None, o scraper percorrerá todas as páginas disponíveis.
+
+    #     Returns:
+    #         list[dict]: Uma lista de dicionários, onde cada item é um objeto de produto 
+    #             validado e estruturado conforme o Schema VIP.
+
+    #     Raises:
+    #         Exception: Captura e loga erros em nível de card ou página, garantindo que 
+    #             uma falha isolada não interrompa todo o pipeline (resiliência).
+    #     """
+    #     self.iniciar_driver()
+    #     buffer_produtos = [] # buffer
+    #     pagina = 1
+    #     url_base_filtrada = None # Aqui guardaremos a URL do filtro
+    #     filtro_aplicado = False # Controle para filtrar apenas uma vez
+    #     url_filtrada = False
+
+    #     # DEFINIMOS A URL BASE UMA VEZ
+    #     url_base = "https://www.magazinevoce.com.br/magazineoficialweblu/celulares-e-smartphones/l/te/"
+        
+    #     try:
+    #         while True:
+    #             if max_paginas and pagina > max_paginas:
+    #                 logging.info(f"🛑 Limite de {max_paginas} páginas atingido.")
+    #                 break
+    #             # if not url_filtrada: # Entrando pela primeira vez, sem filtro ainda
+    #             #     url = f"https://www.magazinevoce.com.br/magazineoficialweblu/celulares-e-smartphones/l/te/?page={pagina}"
+    #             # else: 
+    #             #     url = f"https://www.magazinevoce.com.br/magazineoficialweblu/celulares-e-smartphones/l/te/entity---smartphone/?page={pagina}"
+
+    #             # CONSTRUÇÃO DA URL DINÂMICA
+    #             # Se o filtro foi aplicado, usamos o slug de smartphone
+    #             pasta_filtro = "entity---smartphone/" if filtro_aplicado else ""
+    #             url_final = f"{url_base}{pasta_filtro}?page={pagina}"
+
+    #             logging.info(f"--- 📡 Acessando Página {pagina}: {url_final} ---")
+                
+    #             # HARD REFRESH: Garante que o navegador não use cache
+    #             self.driver.get(url_final)
+    #             time.sleep(5) # Espera o carregamento inicial
+                    
+
+    #             logging.info(f"---📡 Acessando Página {pagina}... ---")
+                
+    #             try:
+
+    #                 self.driver.get(url_final)
+
+    #                 time.sleep(random.uniform(4, 7))
+    #                 # if not filtro_aplicado:
+    #                 #     try:
+    #                 #         # XPath robusto para achar o checkbox de Smartphone pelo pai li
+    #                 #         xpath_filtro = "//li[@data-testid='filter-checkbox'][.//p[text()='Smartphone']]"
+    #                 #         filtro_pai = WebDriverWait(self.driver, 10).until(
+    #                 #             EC.presence_of_element_located((By.XPATH, xpath_filtro))
+    #                 #         )
+                            
+    #                 #         # Rola até o filtro para garantir que está visível
+    #                 #         self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", filtro_pai)
+    #                 #         time.sleep(1)
+                            
+    #                 #         checkbox = filtro_pai.find_element(By.CSS_SELECTOR, "input[data-testid='checkbox-item']")
+    #                 #         logging.info("🖱️ Marcando o filtro 'Smartphone' pela primeira vez...")
+    #                 #         checkbox.click()
+                            
+    #                 #         filtro_aplicado = True
+    #                 #         # URL foi mudada
+    #                 #         url_filtrada = True
+    #                 #         url_base_filtrada = self.driver.current_url
+    #                 #         time.sleep(5) # Espera o Ajax recarregar os produtos
+    #                 #     except Exception as e:
+    #                 #         logging.warning(f"⚠️ Filtro não encontrado ou já aplicado: {e}")
+    #                 # SÓ APLICA O FILTRO NA PÁGINA 1
+    #                 if pagina == 1 and not filtro_aplicado:
+    #                     try:
+    #                         xpath_filtro = "//li[@data-testid='filter-checkbox'][.//p[text()='Smartphone']]"
+    #                         btn = WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.XPATH, xpath_filtro)))
+    #                         self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", btn)
+    #                         time.sleep(1)
+    #                         btn.click()
+    #                         filtro_aplicado = True
+    #                         time.sleep(5) # Espera o filtro processar
+    #                         # APÓS FILTRAR, A PÁGINA MUDA. PRECISAMOS PEGAR O HTML NOVO
+    #                     except Exception as e:
+    #                         logging.warning(f"Filtro não aplicado: {e}")
+                    
+    #                 sopa = BeautifulSoup(self.driver.page_source, 'html.parser')
+    #                 cards = sopa.find_all(['a'], attrs={'data-testid': 'product-card-container'})
+
+    #                 nav_paginacao = sopa.find('nav', attrs={'aria-label': 'pagination navigation'})
+    #                 titulo_filtros_selecionados = sopa.find('p', attrs={'data-testid':'selected-filters'})
+    #                 chip_filtro = sopa.find('label', attrs={'data-testid': 'chip-label'})
+
+    #                 if chip_filtro:
+    #                     # 2. Extrai o texto do parágrafo dentro do label
+    #                     texto_filtro = chip_filtro.find('p').get_text().strip()
+    #                     logging.info(f"📍 Filtro ativo confirmado: {texto_filtro}")
+
+    #                 if not cards:
+    #                     logging.warning(f"🏁 Fim da linha na página {pagina}. Não há mais cards.")
+    #                     break
+    #                 if not nav_paginacao:
+    #                     logging.warning(f"🏁 Não há paginação")
+    #                     break
+
+    #                 if not texto_filtro and not chip_filtro and not titulo_filtros_selecionados:
+    #                     logging.warning(f"🏁 Por algum motivo saiu do filtro")
+    #                     break
+
+    #                 for card in cards:
+    #                     try:            
+
+    #                         # 1. Busca de Elementos
+    #                         titulo_elem = card.find('h2', attrs={'data-testid': 'product-title'})
+    #                         if not titulo_elem: continue
+
+    #                         preco_original_elem = card.find('p', attrs={'data-testid': 'price-original'})
+    #                         texto_parcelamento_elem = card.find('p', attrs={'data-testid': 'installment'})
+    #                         preco_pix_elem = card.find('p', attrs={'data-testid': 'price-value'})
+
+    #                         # 2. Tratamento de Textos e Preços
+    #                         txt_titulo = normalizar_texto(titulo_elem.text)
+    #                         txt_antigo = normalizar_texto(preco_original_elem.text) if preco_original_elem else "N/A"
+    #                         txt_pix = normalizar_texto(preco_pix_elem.text) if preco_pix_elem else "N/A"
+    #                         info_parcela = normalizar_texto(texto_parcelamento_elem.text) if texto_parcelamento_elem else "N/A"
+
+    #                         num_antigo = limpar_valor_simples_para_float(txt_antigo)
+    #                         num_pix = limpar_valor_simples_para_float(txt_pix)
+
+    #                         # 3. Lógica do Preço de Venda
+    #                         if info_parcela != "N/A" and "x" in info_parcela.lower():
+    #                             num_atual = calcular_preco_total_parcelado(info_parcela)
+    #                         elif num_pix > 0:
+    #                             num_atual = num_pix
+    #                         else:
+    #                             num_atual = num_antigo
+
+    #                         # 4. Extração de ID, Link e VENDEDOR (Nova Lógica)
+    #                         link_relativo = card.get('href', '')
+                            
+    #                         # --- BUSCA DO VENDEDOR NO LINK ---
+    #                         # Tentamos encontrar 'seller_id=nome_da_loja'
+    #                         vendedor_nome = "Magazine Luiza"
+    #                         match_seller = re.search(r'seller_id=([^&/]+)', link_relativo)
+                            
+    #                         if match_seller:
+    #                             raw_seller = match_seller.group(1).lower()
+                                
+    #                             # Se o seller_id for diferente de magazineluiza, é Marketplace!
+    #                             if "magazineluiza" not in raw_seller:
+    #                                 vendedor_nome = raw_seller.replace('oficial', '').capitalize()
+    #                                 canal_venda = "MARKETPLACE"
+    #                             else:
+    #                                 # Caso tenha seller_id mas seja o do próprio Magalu
+    #                                 vendedor_nome = "Magazine Luiza"
+    #                                 canal_venda = "VENDA_DIRETA"
+                              
+    #                         # ---------------------------------
+
+    #                         product_id = "N/A"
+    #                         match_p = re.search(r'/p/(\d+)/', link_relativo)
+    #                         match_p = re.search(r'/p/([^/]+)/', link_relativo)
+                            
+    #                         if match_p:
+    #                             product_id = match_p.group(1)
+    #                             logging.info(f"✅ ID extraído da URL: {product_id}")
+    #                         else:
+    #                             product_id = hashlib.md5(txt_titulo.encode()).hexdigest()[:10]
+    #                             logging.warning(f"⚠️ ID não encontrado, usando Hash: {product_id}")
+
+    #                         # 5. Organização dos dados para o Schema VIP
+    #                         dados_limpos = {
+    #                             "id_produto": product_id,
+    #                             "titulo": txt_titulo,
+    #                             "preco_antigo": num_antigo,
+    #                             "preco_pix": num_pix,
+    #                             "preco_atual": num_atual,
+    #                             "parcelamento_original": info_parcela
+    #                         }
+
+    #                         contexto = {
+    #                             "timestamp": obter_timestamp(),
+    #                             "ambiente": self.ambiente,
+    #                             "versao_pipeline": self.versao,
+    #                             "tipo_coleta": self.tipo_coleta,
+    #                             "url_produto": f"https://www.magazinevoce.com.br{link_relativo}",
+    #                             "canal_venda": canal_venda,
+    #                             "loja": vendedor_nome,
+    #                             "pagina": pagina
+    #                         }
+
+    #                         # 6. Montagem e Buffer
+    #                         produto_final = montar_objeto_produto(dados_limpos, contexto, classificador_ai=self.classificador)
+                            
+    #                         # --- GATILHO DE REVISÃO IA (Aprimorado) ---
+    #                         cat_atual = produto_final['produto']['categoria']
+    #                         is_bundle = produto_final['produto']['is_bundle']
+
+    #                         # Pegamos apenas a primeira parte da categoria caso seja um bundle (ex: "Smartwatch + Cabo" -> "Smartwatch")
+    #                         cat_principal = cat_atual.split(' + ')[0] if ' + ' in cat_atual else cat_atual
+
+    #                         # CONDIÇÃO: Se a categoria principal for Smartwatch e o preço for suspeito (< 200)
+    #                         # Note que ignoramos se é bundle ou não aqui, pois um Smartwatch de 150 reais 
+    #                         # continua sendo uma Smartband disfarçada mesmo que venha com brinde.
+    #                         if cat_principal == "Smartwatch" and num_atual <= 199:
+    #                             logging.warning(f"🔎 Analisando suspeito via IA: {txt_titulo} (Preço: {num_atual})")
+                                
+    #                             # 1. Busca a descrição entrando no card
+    #                             desc_completa = self.extrair_descricao_detalhada(contexto['url_produto'], txt_titulo)
+                                
+    #                             # 2. Envia para a IA com o contexto da descrição
+    #                             if desc_completa != "N/A":
+    #                                 # Melhoria no prompt: informamos à IA que o preço é baixo para ela ficar em alerta
+    #                                 prompt_ia = f"Produto: {txt_titulo} | Preço: R$ {num_atual} | Descrição: {desc_completa[:1500]}"
+    #                                 veredito = self.classificador.classificar(prompt_ia, preco_produto=num_atual, modo_profundo=True)
+                                    
+    #                                 # 3. ATUALIZAÇÃO INTELIGENTE
+    #                                 # Se for bundle, preservamos os extras detectados (ex: "Smartband + Acessório")
+    #                                 if is_bundle and ' + ' in cat_atual:
+    #                                     extras = cat_atual.split(' + ')[1:]
+    #                                     nova_categoria = " + ".join([veredito] + extras)
+    #                                 else:
+    #                                     nova_categoria = veredito
+
+    #                                 produto_final['produto']['categoria'] = nova_categoria
+    #                                 logging.info(f"🤖 IA reclassificou: {cat_atual} -> {nova_categoria}")
+                                    
+    #                         buffer_produtos.append(produto_final)
+                        
+    #                     except Exception as e:
+    #                         logging.error(f"❌ Erro ao processar card na página {pagina}: {e}")
+    #                         continue 
+
+    #                 logging.info(f"✅ Página {pagina} finalizada. Total: {len(buffer_produtos)} itens.")
+    #                 pagina += 1
+
+    #             except Exception as e:
+    #                 logging.error(f"⚠️ Erro crítico na página {pagina}: {e}")
+    #                 pagina += 1 
+
+    #     finally:
+    #         self.fechar_driver()
+            
+    #     return buffer_produtos
+
+    def coletar_produtos(self, categoria_alvo, max_paginas=None):
+        """
+        Pipeline de coleta blindado: filtragem dinâmica, detecção de fim e IA.
         """
         self.iniciar_driver()
-        buffer_produtos = [] # buffer
+        buffer_produtos = []
         pagina = 1
+        filtro_aplicado = False
+        
+        # URL BASE - Ponto de partida
+        url_base = "https://www.magazinevoce.com.br/magazineoficialweblu/celulares-e-smartphones/l/te/"
         
         try:
             while True:
-                if max_paginas and pagina > max_paginas:
-                    logging.info(f"🛑 Limite de {max_paginas} páginas atingido.")
+                # 1. CONSTRUÇÃO DA URL DINÂMICA
+                # pasta_categoria = "entity---smartphone/" if filtro_aplicado else ""
+                # url_final = f"{url_base}{pasta_categoria}?page={pagina}"
+                # Ex: Smartwatch vira entity---smartwatch/
+                pasta_filtro = f"entity---{categoria_alvo.lower()}/" if filtro_aplicado else ""
+                url_final = f"{url_base}{pasta_filtro}?page={pagina}"
+                
+                # logging.info(f"--- 📡 Acessando Página {pagina}: {url_final} ---")
+                # self.driver.get(url_final)
+                # time.sleep(random.uniform(4, 6))
+                logging.info(f"--- 📡 Acessando {categoria_alvo} | Página {pagina} ---")
+                self.driver.get(url_final)
+                time.sleep(random.uniform(4, 6))
+
+                # 2. APLICAÇÃO DO FILTRO (Apenas na Página 1)
+                if pagina == 1 and not filtro_aplicado:
+                    try:
+                        # xpath_filtro = "//li[@data-testid='filter-checkbox'][.//p[text()='Smartphone']]"
+                        xpath_filtro = f"//li[@data-testid='filter-checkbox'][.//p[text()='{categoria_alvo}']]"
+                        
+                        filtro_pai = WebDriverWait(self.driver, 12).until(
+                            EC.element_to_be_clickable((By.XPATH, xpath_filtro))
+                        )
+                        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", filtro_pai)
+                        time.sleep(1)
+                        
+                        checkbox = filtro_pai.find_element(By.CSS_SELECTOR, "input[data-testid='checkbox-item']")
+                        logging.info("🖱️ Marcando o filtro 'Smartphone' pela primeira vez...")
+                        checkbox.click()
+                        
+                        filtro_aplicado = True
+                        time.sleep(5) # Espera o Ajax recarregar
+
+                        # --- DETECÇÃO DO LIMITE DE PÁGINAS ---
+                        sopa_paginacao = BeautifulSoup(self.driver.page_source, 'html.parser')
+                        nav = sopa_paginacao.find('nav', attrs={'aria-label': 'pagination navigation'})
+                        if nav and max_paginas is None:
+                            links = nav.find_all('a', attrs={'data-testid': 'pagination-item'})
+                            nums = [int(l.text) for l in links if l.text.isdigit()]
+                            if nums:
+                                max_paginas = max(nums)
+                                logging.info(f"🎯 Limite dinâmico: {max_paginas} páginas.")
+                        
+                        sopa = BeautifulSoup(self.driver.page_source, 'html.parser')
+                    except Exception as e:
+                        logging.error(f"⚠️ Falha ao aplicar filtro: {e}")
+                        break
+                else:
+                    sopa = BeautifulSoup(self.driver.page_source, 'html.parser')
+
+                # 3. VALIDAÇÃO (KILL SWITCH)
+                chip = sopa.find('label', attrs={'data-testid': 'chip-label'})
+                texto_chip = chip.find('p').get_text().strip() if chip else ""
+                
+                # Mudança Crítica: Comparamos com a categoria_alvo que você passou na função
+                if filtro_aplicado and texto_chip != categoria_alvo:
+                    logging.warning(f"🚨 Filtro de {categoria_alvo} caiu! Encerrando na pág {pagina}.")
                     break
 
-                url = f"https://www.magazinevoce.com.br/magazineoficialweblu/celulares-e-smartphones/l/te/?page={pagina}"
-                logging.info(f"📡 Acessando Página {pagina}...")
-                
-                try:
-                    self.driver.get(url)
-                    time.sleep(random.uniform(4, 7))
-                    
-                    sopa = BeautifulSoup(self.driver.page_source, 'html.parser')
-                    cards = sopa.find_all(['a'], attrs={'data-testid': 'product-card-container'})
+                # 4. PROCESSAMENTO DOS CARDS
+                cards = sopa.find_all(['a'], attrs={'data-testid': 'product-card-container'})
+                if not cards:
+                    break
 
-                    if not cards:
-                        logging.warning(f"🏁 Fim da linha na página {pagina}. Não há mais cards.")
-                        break
+                for card in cards:
+                    try:
+                        # --- EXTRAÇÃO DE DADOS DO CARD ---
+                        titulo_elem = card.find('h2', attrs={'data-testid': 'product-title'})
+                        if not titulo_elem: continue
+                        
+                        preco_orig_elem = card.find('p', attrs={'data-testid': 'price-original'})
+                        parcela_elem = card.find('p', attrs={'data-testid': 'installment'})
+                        pix_elem = card.find('p', attrs={'data-testid': 'price-value'})
 
-                    for card in cards:
-                        try:
-                            # 1. Busca de Elementos
-                            titulo_elem = card.find('h2', attrs={'data-testid': 'product-title'})
-                            if not titulo_elem: continue
+                        txt_titulo = normalizar_texto(titulo_elem.text)
+                        txt_antigo = normalizar_texto(preco_orig_elem.text) if preco_orig_elem else "N/A"
+                        txt_pix = normalizar_texto(pix_elem.text) if pix_elem else "N/A"
+                        info_parcela = normalizar_texto(parcela_elem.text) if parcela_elem else "N/A"
 
-                            preco_original_elem = card.find('p', attrs={'data-testid': 'price-original'})
-                            texto_parcelamento_elem = card.find('p', attrs={'data-testid': 'installment'})
-                            preco_pix_elem = card.find('p', attrs={'data-testid': 'price-value'})
+                        num_antigo = limpar_valor_simples_para_float(txt_antigo)
+                        num_pix = limpar_valor_simples_para_float(txt_pix)
 
-                            # 2. Tratamento de Textos e Preços
-                            txt_titulo = normalizar_texto(titulo_elem.text)
-                            txt_antigo = normalizar_texto(preco_original_elem.text) if preco_original_elem else "N/A"
-                            txt_pix = normalizar_texto(preco_pix_elem.text) if preco_pix_elem else "N/A"
-                            info_parcela = normalizar_texto(texto_parcelamento_elem.text) if texto_parcelamento_elem else "N/A"
+                        # Cálculo de Preço Atual
+                        if info_parcela != "N/A" and "x" in info_parcela.lower():
+                            num_atual = calcular_preco_total_parcelado(info_parcela)
+                        elif num_pix > 0:
+                            num_atual = num_pix
+                        else:
+                            num_atual = num_antigo
 
-                            num_antigo = limpar_valor_simples_para_float(txt_antigo)
-                            num_pix = limpar_valor_simples_para_float(txt_pix)
+                        # Vendedor e Link
+                        link_relativo = card.get('href', '')
+                        url_produto = f"https://www.magazinevoce.com.br{link_relativo}"
+                        
+                        vendedor_nome = "Magazine Luiza"
+                        canal_venda = "VENDA_DIRETA"
+                        match_s = re.search(r'seller_id=([^&/]+)', link_relativo)
+                        if match_s:
+                            raw_s = match_s.group(1).lower()
+                            if "magazineluiza" not in raw_s:
+                                vendedor_nome = raw_s.replace('oficial', '').capitalize()
+                                canal_venda = "MARKETPLACE"
 
-                            # 3. Lógica do Preço de Venda
-                            if info_parcela != "N/A" and "x" in info_parcela.lower():
-                                num_atual = calcular_preco_total_parcelado(info_parcela)
-                            elif num_pix > 0:
-                                num_atual = num_pix
-                            else:
-                                num_atual = num_antigo
+                        product_id = "N/A"
+                        match_p = re.search(r'/p/(\d+)/', link_relativo)
+                        match_p = re.search(r'/p/([^/]+)/', link_relativo)
 
-                            # 4. Extração de ID, Link e VENDEDOR (Nova Lógica)
-                            link_relativo = card.get('href', '')
-                            
-                            # --- BUSCA DO VENDEDOR NO LINK ---
-                            # Tentamos encontrar 'seller_id=nome_da_loja'
-                            vendedor_nome = "Magazine Luiza"
-                            match_seller = re.search(r'seller_id=([^&/]+)', link_relativo)
-                            
-                            if match_seller:
-                                raw_seller = match_seller.group(1).lower()
+                        if match_p:
+                            product_id = match_p.group(1)
+                            logging.info(f"✅ ID extraído da URL: {product_id}")
+                        else:
+                            product_id = hashlib.md5(txt_titulo.encode()).hexdigest()[:10]
+                            logging.warning(f"⚠️ ID não encontrado, usando Hash: {product_id}")
+
+                        # 5. MONTAGEM DO OBJETO
+                        dados_limpos = {
+                            "id_produto": product_id,
+                            "titulo": txt_titulo,
+                            "preco_antigo": num_antigo,
+                            "preco_pix": num_pix,
+                            "preco_atual": num_atual,
+                            "parcelamento_original": info_parcela
+                        }
+
+                        contexto = {
+                            "timestamp": obter_timestamp(),
+                            "ambiente": self.ambiente,
+                            "versao_pipeline": self.versao,
+                            "tipo_coleta": self.tipo_coleta,
+                            "url_produto": url_produto,
+                            "canal_venda": canal_venda,
+                            "loja": vendedor_nome,
+                            "pagina": pagina
+                        }
+
+                        produto_final = montar_objeto_produto(dados_limpos, contexto, classificador_ai=self.classificador)
+
+                        # --- 6. GATILHO DE REVISÃO IA ---
+                        # Aqui mantemos sua lógica de proteção contra Smartbands baratas
+                        cat_atual = produto_final['produto']['categoria']
+                        cat_principal = cat_atual.split(' + ')[0] if ' + ' in cat_atual else cat_atual
+
+                        if cat_principal == "Smartwatch" and num_atual <= 199:
+                            desc = self.extrair_descricao_detalhada(url_produto, txt_titulo)
+                            if desc != "N/A":
+                                prompt = f"Produto: {txt_titulo} | Preço: R$ {num_atual} | Descrição: {desc[:1500]}"
+                                veredito = self.classificador.classificar(prompt, preco_produto=num_atual, modo_profundo=True)
                                 
-                                # Se o seller_id for diferente de magazineluiza, é Marketplace!
-                                if "magazineluiza" not in raw_seller:
-                                    vendedor_nome = raw_seller.replace('oficial', '').capitalize()
-                                    canal_venda = "MARKETPLACE"
+                                # Preserva o brinde se houver
+                                if produto_final['produto']['is_bundle'] and ' + ' in cat_atual:
+                                    extras = cat_atual.split(' + ')[1:]
+                                    produto_final['produto']['categoria'] = " + ".join([veredito] + extras)
                                 else:
-                                    # Caso tenha seller_id mas seja o do próprio Magalu
-                                    vendedor_nome = "Magazine Luiza"
-                                    canal_venda = "VENDA_DIRETA"
-                              
-                            # ---------------------------------
+                                    produto_final['produto']['categoria'] = veredito
+                                logging.info(f"🤖 IA reclassificou: {cat_atual} -> {produto_final['produto']['categoria']}")
 
-                            product_id = "N/A"
-                            match_p = re.search(r'/p/(\d+)/', link_relativo)
-                            
-                            if match_p:
-                                product_id = match_p.group(1)
-                            else:
-                                product_id = hashlib.md5(txt_titulo.encode()).hexdigest()[:10]
+                        buffer_produtos.append(produto_final)
 
-                            # 5. Organização dos dados para o Schema VIP
-                            dados_limpos = {
-                                "id_produto": product_id,
-                                "titulo": txt_titulo,
-                                "preco_antigo": num_antigo,
-                                "preco_pix": num_pix,
-                                "preco_atual": num_atual,
-                                "parcelamento_original": info_parcela
-                            }
+                    except Exception as e:
+                        logging.error(f"❌ Erro no card: {e}")
 
-                            contexto = {
-                                "timestamp": obter_timestamp(),
-                                "ambiente": self.ambiente,
-                                "versao_pipeline": self.versao,
-                                "tipo_coleta": self.tipo_coleta,
-                                "url_produto": f"https://www.magazinevoce.com.br{link_relativo}",
-                                "canal_venda": canal_venda,
-                                "loja": vendedor_nome,
-                                "pagina": pagina
-                            }
+                # 7. INCREMENTO
+                if max_paginas and pagina >= max_paginas:
+                    break
+                pagina += 1
 
-                            # 6. Montagem e Buffer
-                            produto_final = montar_objeto_produto(dados_limpos, contexto, classificador_ai=ia_instanciada)
-                            buffer_produtos.append(produto_final)
-
-                        except Exception as e:
-                            logging.error(f"❌ Erro ao processar card na página {pagina}: {e}")
-                            continue 
-
-                    logging.info(f"✅ Página {pagina} finalizada. Total: {len(buffer_produtos)} itens.")
-                    pagina += 1
-
-                except Exception as e:
-                    logging.error(f"⚠️ Erro crítico na página {pagina}: {e}")
-                    pagina += 1 
-
+        except Exception as e:
+            logging.error(f"❌  Erro crítico: {e}")
         finally:
             self.fechar_driver()
             
