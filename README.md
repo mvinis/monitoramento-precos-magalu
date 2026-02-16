@@ -20,9 +20,10 @@ graph TD
     classDef storage fill:#eeeeee,stroke:#333,color:#000,stroke-width:2px;
     classDef final fill:#fbb,stroke:#333,color:#000,font-weight:bold;
 
-    Start((Início)):::start --> Config[Definir URL Inicial e<br/>Inicializar Buffer]:::process
+    Start((Início)):::start --> Config[Definir Categoria alvo e URL Inicial]:::process
 
-    Config --> AccessPage[Acessar Página Atual]:::process
+    Config --> iniatilizeBuffer[Inicializar Buffer]:::process
+    iniatilizeBuffer --> AccessPage[Acessar Página Atual]:::process
     AccessPage --> SuccessPage{Página<br/>Carregou?}:::decision
 
     SuccessPage -- Não --> LogPageErr[Log: Falha na Página]:::error
@@ -50,7 +51,8 @@ graph TD
 
     HasNext -- Não --> Aggregation[Consolidar Buffer e Metadados]:::process
     Aggregation --> SaveJSON[Gerar Arquivo JSON Bronze]:::storage
-    SaveJSON --> End((Fim do Processo)):::final
+    SaveJSON --> SaveXLSX[Gerar Arquivo XLSX]:::storage
+    SaveXLSX --> End((Fim do Processo)):::final
 ```
 
 ### Diagrama de Sequência
@@ -61,6 +63,7 @@ sequenceDiagram
     participant DRV as WebDriver (Browser)
     participant SCR as Motor de Scraping
     participant TRF as Transformador de Dados
+    participant IA as mDeBERTa-v3 (IA)
     participant STO as Zona de Destino (Storage)
     autonumber
 
@@ -71,13 +74,20 @@ sequenceDiagram
     SCR->>SCR: Identifica Componentes do Produto (Nodes)
     loop Para cada Objeto de Produto
         SCR->>TRF: Envia Strings Brutas (Preço, Nome, ID)
-        TRF->>TRF: Aplica Limpeza e Regras de Negócio
-        TRF->>TRF: Gera Hash Único (Fingerprint)
+        TRF->>TRF: Aplica Limpeza, Regras de Negócio e Categorização
+
+         %% Início da condição "if"
+        opt Se for Smartwatch com valor baixo
+            TRF->>IA: Solicita análise de produto
+            IA-->>TRF: Retorna categoria vencedora
+        end
+
         TRF-->>SCR: Objeto Estruturado/Validado
     end
 
     SCR-->>ORQ: Dataset Normalizado
     ORQ->>STO: Persistir Dados (JSON)
+    ORQ->>STO: Persistir Dados (XLSX)
 ```
 
 ### Diagrama de Classes
