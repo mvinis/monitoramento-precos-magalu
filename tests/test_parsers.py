@@ -45,6 +45,7 @@ def test_bundles_reais():
     assert detectar_bundle("Combo Gamer: Mouse + Teclado") is True
     assert detectar_bundle("Relógio + 7 Pulseiras") is True
     assert detectar_bundle("Relógio digital Smart inteligente Hw12 41mm com pulseira metal extra - Smart Bracelet") is True
+    assert detectar_bundle("Pulseira Inteligente Xiaomi Smart Band 10 Tela AMOLED com 150 modos esportivos, Recursos Premium de Monitoramento e Bateria Até 21 Dias") is False
 
 def test_match_categorias():
     """
@@ -82,6 +83,42 @@ def test_match_categorias():
     titulo_smartwatch_infantil = "Relógio SmartWatch Infantil Com Rastreador GPS Chip e Câmera - Plus Distribuidora"
     assert categorizar_produto(titulo_smartwatch_infantil.lower(), titulo_smartwatch_infantil, 111.06) == "Smartwatch"
 
+    titulo_pulseira_mi_smart = "Pulseira MI Smart Band 6 Xiaomi, Display AMOLED, Função Esportiva, Preto - BAND 6"
+    assert categorizar_produto(titulo_pulseira_mi_smart.lower(), titulo_pulseira_mi_smart, 1010.52) == "Smartband"
+   
+    titulo_smartwatch_xiaomi = "Xiaomi Watch 5 Active Branco Alta Durabilidade"
+    assert categorizar_produto(titulo_smartwatch_xiaomi.lower(), titulo_smartwatch_xiaomi, 1147) == "Smartwatch"
+
+    titulo_pulseiro_de_monitor = "Pulseira de monitor de frequência cardíaca COROS cinza grande"
+    assert categorizar_produto(titulo_pulseiro_de_monitor.lower(), titulo_pulseiro_de_monitor, 229.53) == "Acessório"
+
+    titulo_bracelet_de_silicone = "Bracelete De Silicone Para Mi Band 3 / 4 Xiaomi, Laranja"
+    assert categorizar_produto(titulo_bracelet_de_silicone.lower(), titulo_bracelet_de_silicone, 39.99) == "Acessório"
+
+    titulo_pulseira_silicone_para_samsung = "Pulseira de silicone para Samsung Galaxy Fit 2 R220 rosa - Lightbek Official Store"
+    assert categorizar_produto(titulo_pulseira_silicone_para_samsung.lower(), titulo_pulseira_silicone_para_samsung, 234.50) == "Acessório"
+
+    titulo_relogio_plumzong_monitor = "Relógio Plumzong Feminino Inteligente Pulseira Monitor De Freqüência Cardíaca - ElaShopp"
+    assert categorizar_produto(titulo_relogio_plumzong_monitor.lower(), titulo_relogio_plumzong_monitor, 729.30) == "Smartwatch"
+    
+    titulo_pulseira_inteligente_xiaomi_smartband = "Pulseira Inteligente Xiaomi Smart Band 10 Preto"
+    assert categorizar_produto(titulo_pulseira_inteligente_xiaomi_smartband.lower(), titulo_pulseira_inteligente_xiaomi_smartband, 600) == "Smartband"
+    
+    titulo_pulseira_inteligente_xiaomi_smartband = "Pulseira Inteligente Xiaomi Smart Band 10 Preto"
+    assert categorizar_produto(titulo_pulseira_inteligente_xiaomi_smartband.lower(), titulo_pulseira_inteligente_xiaomi_smartband, 600) == "Smartband"
+    
+    titulo_pulseira_inteligente_xiomi = "Pulseira Inteligente Xiaomi Smart Band 10 Tela AMOLED com 150 modos esportivos, Recursos Premium de Monitoramento e Bateria Até 21 Dias"
+    assert categorizar_produto(titulo_pulseira_inteligente_xiomi.lower(), titulo_pulseira_inteligente_xiomi, 1100) == "Smartband"
+
+    titulo_relogio_inteligente = "Relógio Inteligente Para Samsung Galaxy A54 - generico"
+    assert categorizar_produto(titulo_relogio_inteligente.lower(), titulo_relogio_inteligente, 187.97) == "Smartwatch"
+
+    titulo_pulseira_esportiva_nsmart = "Pulseira Esportiva NSmart compatíveis com smartwatch Verge e verge Lite."
+    assert categorizar_produto(titulo_pulseira_esportiva_nsmart.lower(), titulo_pulseira_esportiva_nsmart, 1719.71) == "Acessório"
+
+    titulo_correa = "Correa para Reloj Inteligente XIAOMI Mi Smart Watch 10 Resistente al Agua 5ATM"
+    assert categorizar_produto(titulo_correa.lower(), titulo_correa, 574.84) == "Smartband"
+
 def test_detectar_bundle_relogio_pulseira():
     titulo = "Relógio digital Smart inteligente Hw12 41mm com pulseira metal extra - Smart Bracelet"
     titulo_low = titulo.lower()
@@ -91,7 +128,7 @@ def test_detectar_bundle_relogio_pulseira():
     cat_base = categorizar_produto(titulo_low, titulo, preco)
     assert cat_base == "Smartwatch"  # Isso deve ser verdade
 
-    # 2. Agora aplica a lógica de Bundle
+    # 2. Aplica a lógica de Bundle
     resultado_final = montar_string_bundle(cat_base, titulo_low)
 
     # 3. Verifica conjunto
@@ -110,7 +147,7 @@ def test_detectar_bundle_garrafa_smartwatch_fone():
     cat_base = categorizar_produto(titulo_low, titulo, preco)
     assert cat_base == "Smartwatch"
 
-    # 2. Agora aplica a lógica de Bundle (O que faltava no teste)
+    # 2. Aplica a lógica de Bundle (O que faltava no teste)
     resultado_final = montar_string_bundle(cat_base, titulo_low)
 
     # 3. Verifica conjunto
@@ -120,4 +157,23 @@ def test_detectar_bundle_garrafa_smartwatch_fone():
 
     partes = resultado_final.split(" + ")
     assert set(partes) == {"Smartwatch", "Acessório", "Áudio"}
+
+def test_detectar_bundle_relogio_sport_e_pulseiras():
+    titulo = "Relógio Digital Sport Led Ultra max com pulseira 3 padrão - Blulory"
+    titulo_low = titulo.lower()
+    preco = 4575.50
+
+    # 1. Primeiro descobre o item principal
+    cat_base = categorizar_produto(titulo_low, titulo, preco)
+    assert cat_base == "Smartband"
+
+    # 2. Aplica a lógica de Bundle (O que faltava no teste)
+    resultado_final = montar_string_bundle(cat_base, titulo_low)
+
+    # 3. Verifica conjunto
+    assert "Smartband" in resultado_final
+    assert "Acessório" in resultado_final
+
+    partes = resultado_final.split(" + ")
+    assert set(partes) == {"Smartband", "Acessório"}
     

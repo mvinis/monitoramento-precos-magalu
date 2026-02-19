@@ -166,9 +166,18 @@ def detectar_bundle(titulo):
     
     # Padrões de quantidade (Ex: 2 pulseiras)
     match_acessorios = re.search(r'\d+\s*(pulseiras|fones|películas|peliculas|capas|case|tiras)', titulo_limpo)
+
+    # Detecta pulseira EXTRA
+    match_pulseira_extra = re.search(
+        r'(com\s+)?pulseira\s+(extra|metal|reserva|adicional|\d+)',
+        titulo_limpo
+    )
+
+    if match_pulseira_extra:
+        return True
     
     # Palavras-chave de itens extras
-    itens_adicionais = ['pulseira', 'brinde', 'kit', 'combo', 'fone de ouvido', 'fone bluetooth', 'cabo', 'fonte', 'fit', 'watch']
+    itens_adicionais = ['brinde', 'kit', 'combo', 'fone de ouvido', 'fone bluetooth', 'cabo', 'fonte', 'fit', 'watch']
     tem_item_extra = any(k in titulo_limpo for k in itens_adicionais)
 
     # 3. FILTRO FINAL DE SEGURANÇA
@@ -199,12 +208,12 @@ def categorizar_produto(titulo, titulo_raw, preco):
         "Smartwatch": [
             "smartwatch", "apple watch", "galaxy watch", "relogio inteligente", "smart watch", "microwear",
             "relógio inteligente", "hw", "hw12", "w28", "ultra 9", "series 9", "relógio smart", "gps", "relógio smartwatch", "relógio smart watch", 
-            "garmin forerunner", "celular de pulso", "relógio digital smart inteligente"
+            "garmin forerunner", "celular de pulso", "relógio digital smart inteligente", "xiaomi watch", "plumzong"
         ],
         "Smartband": [
-            "smartband", "mi band", "pulseira inteligente", "galaxy fit", 
+            "smartband", "pulseira mi", "smart band", "mi band", "pulseira inteligente", "galaxy fit", "correa",
             "fit 3", "d20", "m6", "w69", "gl08", "y68", "fitpro", "hryfine", "m3 band", "m4 band", "xufeng", "relógio smart", "relógio de pulso", "relógio bracelet", " pulseira inteligente ", 
-            "s10", "t800", "smartach", "relógio esportivo"
+            "s10", "t800", "smartach", "relógio esportivo", "relógio fitness", "xiaomi smart band", "relógio digital sport", "pulseira esportiva"
         ],
         "Tablet": [
             "tablet", "ipad", "galaxy tab", "xiaomi pad", "lenovo tab"
@@ -213,14 +222,15 @@ def categorizar_produto(titulo, titulo_raw, preco):
             "carregador", "fonte", "adaptador tomada", "carregamento rapido", "turbo", "power bank", "bateria", "bateria celular",  "carregador portátil", "base carregador"
         ],
         "Acessório": [
-            "pulseira", "smarttag", "localizador", "mili mitag", "airtag", "cordão", "bolsa", "carteira", "controle remoto", "garrafa térmica", "moto tag", "pulseira de silicone", "monitor de frequência cardíaca"
+            "pulseira","band", "smarttag", "localizador", "mili mitag", "airtag", "cordão", "bolsa", "carteira", "controle remoto", "garrafa térmica", "moto tag", "pulseira de silicone", "monitor de frequência cardíaca", "pulseira de monitor de frequência cardíaca",
+            "bracelet de silicone"
         ],
         "Suporte": [
             'suporte', 'suporta', 'tripe', 'tripé', 'bastão', 'pau de selfie', 'estabilizador', 'ring light', 'braçadeira', 'ventosa'
         ],
         "Smartphone": [
             "smartphone", "iphone", "galaxy", "motorola", "moto g", " redmi ", "a56", "redemi", "a26",
-            "poco", "xiaomi", "realme", "14 pro", "15 pro", "s24", "s23", "x7", "128gb", "256gb", "not", "lg k62", "oukitel", "m7"
+            "poco", "realme", "14 pro", "15 pro", "s24", "s23", "x7", "128gb", "256gb", "not", "lg k62", "oukitel", "m7", "xiomi celular"
         ],
         "Celular Básico": [
             "celular basico", "celular para idosos", "idoso", "celular antigo", "nokia 150", "celular 150",
@@ -242,7 +252,7 @@ def categorizar_produto(titulo, titulo_raw, preco):
         
         # 4. OUTROS / CONSUMÍVEIS
         "Chip": [r"(?<!dual\s)(?<!com\s)chip", "pre-pago", "claro", "vivo", "tim", "oi", "cartao sim", "pré-pago", "smart card", "microchip", "minichip", "nanochip"],
-        "Outros": ["tela de projeção", "projetores", "adaptador", "amplificador de tela", "monitor", "sumup"],
+        "Outros": ["tela de projeção", "projetores", "adaptador", "amplificador de tela", "sumup"],
         "Insumos": ["cola", "resina", "ferramenta", "limpeza", "reparo"]
     }
     
@@ -250,21 +260,54 @@ def categorizar_produto(titulo, titulo_raw, preco):
     partes = re.split(r'\b(compatível|compativel| p/ | para | p/| p\. | para a | para o | e )\b', titulo)
     titulo_foco = partes[0] 
     # print("TITULO_FOCO:", titulo_foco)
+    padrao_comp = r'\b(para|p/|compatível|compativel)\b.*\b(mi band|smart band|smartwatch|iphone|galaxy)\b'
+
+    if re.search(padrao_comp, titulo):
+    # Se o título começa com "relógio inteligente" ou "smartwatch",
+    # não é acessório, é hardware compatível
+        if re.search(r'^(rel[oó]gio inteligente|smartwatch|rel[oó]gio smart)', titulo):
+            pass  # continua fluxo normal
+        else:
+            return "Acessório"
+
+    # if re.search(padrao_comp, titulo):
+    #     return "Acessório"
 
     # 2. ESCUDO DE ACESSÓRIOS (Prioridade Imediata)
     prioridade_imediata = ["Proteção","Carregador", "Cabo", "Suporte", "Acessório", "Áudio", "Insumos"]
     for cat in prioridade_imediata:
         for termo in categorias_map[cat]:
             if re.search(rf'^\s*{re.escape(termo)}\b', titulo_foco):
-                if preco < 200: 
-                    return cat
+                
+                # if termo == "pulseira":
+                #     if any(k in titulo_foco for k in ["mi band", "smart band", "xiaomi smart band"]):
+                #         continue
 
-    # 3. PRIORIDADE HARDWARE (Loop Único e Consolidado)
+                if termo == "pulseira":
+                    if re.search(r'\b(smart|mi|xiaomi|inteligente)\b', titulo_foco):
+                        continue
+
+                if cat in ["Proteção", "Cabo", "Suporte"]:
+                    if preco < 200:
+                        return cat
+                    else:
+                        continue
+                
+                if re.search(padrao_comp, titulo):
+                    return "Acessório"
+
+                if cat == "Acessório":
+                    return cat
+                    
+                return cat
+                
+
+    # 3. PRIORIDADE HARDWARE
     ordem_hardware = ["Óculos de Realidade Virtual", "Tablet", "Smartwatch", "Smartband", "Smartphone", "Celular Básico", "Console", "Chip"]
     
     for cat in ordem_hardware:
         for termo in categorias_map[cat]:
-            if re.search(rf'\b{termo}\b', titulo_foco):
+            if re.search(rf'\b{re.escape(termo)}\b', titulo_foco):
                 
                 # --- TRAVA 1: SEGURANÇA CONTRA CAPAS ---
                 if cat in ["Smartphone", "Tablet"] and preco < 250:
@@ -331,7 +374,9 @@ def limpar_valor_simples_para_float(texto):
         limpo = limpo.replace('R$', '').replace('ou', '').replace('.', '').replace(',', '.').replace(' ', '')
         resultado = re.search(r"[-+]?\d*\.\d+|\d+", limpo)
         return float(resultado.group()) if resultado else 0.0
-    except:
+    
+    except Exception as e:
+        logging.error(f"{e}")
         return 0.0
     
 def calcular_preco_total_parcelado(texto_parcela):
