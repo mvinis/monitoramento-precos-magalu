@@ -119,6 +119,12 @@ def test_match_categorias():
     titulo_correa = "Correa para Reloj Inteligente XIAOMI Mi Smart Watch 10 Resistente al Agua 5ATM"
     assert categorizar_produto(titulo_correa.lower(), titulo_correa, 574.84) == "Smartband"
 
+    titulo_carregador_para_mi_band = "Carregador para Mi Band 4 Pulseira Inteligente - KAPBOM"
+    assert categorizar_produto(titulo_carregador_para_mi_band.lower(), titulo_carregador_para_mi_band, 89.70) == "Carregador"
+
+    titulo_smartband_mix_smartwatch = "Smartwatch Pulseira Xiaomi Smart Band 9 Active"
+    assert categorizar_produto(titulo_smartband_mix_smartwatch.lower(), titulo_smartband_mix_smartwatch, 248) == "Smartband"
+
 def test_detectar_bundle_relogio_pulseira():
     titulo = "Relógio digital Smart inteligente Hw12 41mm com pulseira metal extra - Smart Bracelet"
     titulo_low = titulo.lower()

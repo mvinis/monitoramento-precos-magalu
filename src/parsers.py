@@ -113,7 +113,6 @@ def montar_string_bundle(base, titulo_low):
 
             # 2. LÓGICA ESPECIAL PARA PULSEIRAS
             if nome_exibicao == "Acessório" and is_hardware_principal and "pulseira" in termo:
-                # print(f"[DEBUG]    Entrou na verificação de PULSEIRA...")
                 
                 # Regex original do seu código (ajustada para pegar os dois lados)
                 # Testando: "pulseira extra" OU "extra pulseira"
@@ -185,7 +184,6 @@ def detectar_bundle(titulo):
     if tem_sinal and not tem_item_extra and not bool(match_acessorios):
         termos_specs = ['br', 'nfc', 'nf', 'gb', 'mb', '5g', '4g', 'dual', 'sim', 'mah', 'bateria', 'biometria', 'nfe', 'camera', 'samsung xiaomi', 'ganfast', 'mp', 'usb', 'gps']
         if any(t in titulo_limpo for t in termos_specs):
-            # Se só sobrou o sinal de + mas não detectamos um item claro, assumimos que é spec residual
             return False
     
     # Detecta padrão explícito de bundle com acessório
@@ -194,9 +192,9 @@ def detectar_bundle(titulo):
 
     return bool(match_acessorios) or bool(match_qtd_unidades) or tem_item_extra or tem_sinal
 
-def categorizar_produto(titulo, titulo_raw, preco):
+def categorizar_produto(titulo, preco):
 
-    # Dicionário das categorias (ATUALIZADO)
+    # Dicionário das categorias
     categorias_map = {
         
         "Proteção": [
@@ -204,6 +202,9 @@ def categorizar_produto(titulo, titulo_raw, preco):
         ],
         "Óculos de Realidade Virtual": [
             "óculos vr", "óculos inteligente", "vr", "óculos de realidade virtual", "óculos vr realidade virtual"
+        ],
+        "Carregador": [
+            "carregador", "fonte", "adaptador tomada", "carregamento rapido", "turbo", "power bank", "bateria", "bateria celular",  "carregador portátil", "base carregador"
         ],
         "Smartwatch": [
             "smartwatch", "apple watch", "galaxy watch", "relogio inteligente", "smart watch", "microwear",
@@ -217,9 +218,6 @@ def categorizar_produto(titulo, titulo_raw, preco):
         ],
         "Tablet": [
             "tablet", "ipad", "galaxy tab", "xiaomi pad", "lenovo tab"
-        ],
-        "Carregador": [
-            "carregador", "fonte", "adaptador tomada", "carregamento rapido", "turbo", "power bank", "bateria", "bateria celular",  "carregador portátil", "base carregador"
         ],
         "Acessório": [
             "pulseira","band", "smarttag", "localizador", "mili mitag", "airtag", "cordão", "bolsa", "carteira", "controle remoto", "garrafa térmica", "moto tag", "pulseira de silicone", "monitor de frequência cardíaca", "pulseira de monitor de frequência cardíaca",
@@ -259,19 +257,7 @@ def categorizar_produto(titulo, titulo_raw, preco):
     # 1. TRUNCAGEM
     partes = re.split(r'\b(compatível|compativel| p/ | para | p/| p\. | para a | para o | e )\b', titulo)
     titulo_foco = partes[0] 
-    # print("TITULO_FOCO:", titulo_foco)
     padrao_comp = r'\b(para|p/|compatível|compativel)\b.*\b(mi band|smart band|smartwatch|iphone|galaxy)\b'
-
-    if re.search(padrao_comp, titulo):
-    # Se o título começa com "relógio inteligente" ou "smartwatch",
-    # não é acessório, é hardware compatível
-        if re.search(r'^(rel[oó]gio inteligente|smartwatch|rel[oó]gio smart)', titulo):
-            pass  # continua fluxo normal
-        else:
-            return "Acessório"
-
-    # if re.search(padrao_comp, titulo):
-    #     return "Acessório"
 
     # 2. ESCUDO DE ACESSÓRIOS (Prioridade Imediata)
     prioridade_imediata = ["Proteção","Carregador", "Cabo", "Suporte", "Acessório", "Áudio", "Insumos"]
@@ -279,10 +265,6 @@ def categorizar_produto(titulo, titulo_raw, preco):
         for termo in categorias_map[cat]:
             if re.search(rf'^\s*{re.escape(termo)}\b', titulo_foco):
                 
-                # if termo == "pulseira":
-                #     if any(k in titulo_foco for k in ["mi band", "smart band", "xiaomi smart band"]):
-                #         continue
-
                 if termo == "pulseira":
                     if re.search(r'\b(smart|mi|xiaomi|inteligente)\b', titulo_foco):
                         continue
@@ -294,16 +276,25 @@ def categorizar_produto(titulo, titulo_raw, preco):
                         continue
                 
                 if re.search(padrao_comp, titulo):
-                    return "Acessório"
+                    # Só classifica como acessório genérico se não for algo mais específico
+                    if not any(titulo_foco.startswith(x) for x in ["carregador", "cabo", "fonte", "base carregador"]):
+                        return "Acessório"
 
                 if cat == "Acessório":
                     return cat
                     
                 return cat
+    
+    if re.search(padrao_comp, titulo):
+    # Se o título começa com "relógio inteligente" ou "smartwatch"
+        if re.search(r'^(rel[oó]gio inteligente|smartwatch|rel[oó]gio smart)', titulo):
+            pass  # continua fluxo normal
+        else:
+            return "Acessório"
                 
 
     # 3. PRIORIDADE HARDWARE
-    ordem_hardware = ["Óculos de Realidade Virtual", "Tablet", "Smartwatch", "Smartband", "Smartphone", "Celular Básico", "Console", "Chip"]
+    ordem_hardware = ["Óculos de Realidade Virtual", "Tablet", "Smartband", "Smartwatch", "Smartphone", "Celular Básico", "Console", "Chip"]
     
     for cat in ordem_hardware:
         for termo in categorias_map[cat]:
@@ -316,8 +307,6 @@ def categorizar_produto(titulo, titulo_raw, preco):
                     break 
 
                 # --- TRAVA 2: SEGURANÇA CONTRA "DUAL CHIP" FALSO ---
-                # Se cair no regex de Chip, mas tiver "celular" no título, ignora.
-                # (Isso é uma redundância de segurança, já que o regex (?<!dual) já deve pegar)
                 if cat == "Chip" and "celular" in titulo_foco:
                     continue
 
@@ -325,7 +314,6 @@ def categorizar_produto(titulo, titulo_raw, preco):
                 return cat
     
     # 4. BUSCA GLOBAL (Backup)
-    # Se falhou no foco, busca no título inteiro com as mesmas regras
     for cat in ordem_hardware:
         for termo in categorias_map.get(cat, []):
             if re.search(rf'\b{termo}\b', titulo):
@@ -407,7 +395,6 @@ def calcular_preco_total_parcelado(texto_parcela):
     if not texto_parcela or "N/A" in texto_parcela:
         return 0.0
     try:
-        # Remove pontos para não confundir o regex
         numeros = re.findall(r'\d+', texto_parcela.replace('.', ''))
         if len(numeros) >= 3:
             parcelas = int(numeros[0])
