@@ -17,7 +17,7 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
 
     logging.info(f"--- Processando: {titulo_raw[:50]}... ---")
    
-    categoria_base = categorizar_produto(titulo_low, titulo_raw, p_credito_avista)
+    categoria_base = categorizar_produto(titulo_low, p_credito_avista)
 
     if is_bundle_final:
         categoria = montar_string_bundle(categoria_base, titulo_low)
