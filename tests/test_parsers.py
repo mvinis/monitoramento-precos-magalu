@@ -45,6 +45,7 @@ def test_bundles_reais():
     assert detectar_bundle("Combo Gamer: Mouse + Teclado") is True
     assert detectar_bundle("Relógio + 7 Pulseiras") is True
     assert detectar_bundle("Relógio digital Smart inteligente Hw12 41mm com pulseira metal extra - Smart Bracelet") is True
+    assert detectar_bundle("Kit de bateria para relógio inteligente Suunto Core Lumi t4 t3 e t1 - Marca Própria") is True
     assert detectar_bundle("Pulseira Inteligente Xiaomi Smart Band 10 Tela AMOLED com 150 modos esportivos, Recursos Premium de Monitoramento e Bateria Até 21 Dias") is False
 
 def test_match_categorias():
@@ -124,6 +125,81 @@ def test_match_categorias():
 
     titulo_smartband_mix_smartwatch = "Smartwatch Pulseira Xiaomi Smart Band 9 Active"
     assert categorizar_produto(titulo_smartband_mix_smartwatch.lower(), 248) == "Smartband"
+    
+    titulo_kit_bateria = "Kit de bateria para relógio inteligente Suunto Core Lumi t4 t3 e t1 - Marca Própria"
+    assert categorizar_produto(titulo_kit_bateria.lower(), 391) == "Carregador"
+
+    titulo_relogio_band = "Relógio Band Fintie Gizmo Watch 3 2 1/Gabb Watch 3 2 1 Nylon"
+    assert categorizar_produto(titulo_relogio_band.lower(), 142.83) == "Smartband"
+
+    titulo_relogio_esportivo_coros = "Relógio esportivo COROS PACE 3"
+    assert categorizar_produto(titulo_relogio_esportivo_coros.lower(), 1740) == "Smartband"
+
+    titulo_haylou_smartwatch = "Haylou RS4 Smartwatch com Tela AMOLED Bateria de até 25 dias. Monitoramento de Saúde, Modos de Treinamento"
+    assert categorizar_produto(titulo_haylou_smartwatch.lower(), 440) == "Smartwatch"
+
+    titulo_smartwatch_xiaomi_haylou = "Relógio Smartwatch XiaomiMi Haylou Watch 2 Pro Bluetooth 5.3 Tela De 1,85 HD Display Original Bateria de longa Duração Sicroniza Com Strava"    
+    assert categorizar_produto(titulo_smartwatch_xiaomi_haylou.lower(), 288) == "Smartwatch"
+    
+    titulo_smartband_mix_smartwatch_segundo = "Relógio Smartwatch Smartband Fitness Huawei Band 9 Bateria 14 Dias 100 Treinos"    
+    assert categorizar_produto(titulo_smartband_mix_smartwatch_segundo.lower(), 347) == "Smartband"
+
+    titulo_bastao_selfie = "Bastão de selfie compacto Power Grip Vivitar para GoPro HF-PG5200"    
+    assert categorizar_produto(titulo_bastao_selfie.lower(), 270) == "Suporte"
+    
+    titulo_pau_de_selfie = "Pau d selfie - Kapaom"    
+    assert categorizar_produto(titulo_pau_de_selfie.lower(), 49.05) == "Suporte"
+
+    titulo_vara_de_mao = "Vara de Mão Flutuante para Selfie à Prova dÁgua com Alça de Pulso Compatível com Câmeras de Ação 15m Controle Wireless - Vedo"    
+    assert categorizar_produto(titulo_vara_de_mao.lower(), 138) == "Suporte"
+
+    titulo_tripe_telefone = "Tripé de Telefone SENSYNE 67 com Selfie Stick e Controle Remoto - Prata"    
+    assert categorizar_produto(titulo_tripe_telefone.lower(), 327) == "Suporte"
+    
+    titulo_bastao_flutuante = "Bastão Flutuante The Handler 3.0 Original GoPro - AFHGM-003"    
+    assert categorizar_produto(titulo_bastao_flutuante.lower(), 441) == "Suporte"
+
+    titulo_bastao_suporte_moto = "Bastão Suporte Moto p/ Câmera 360 Graus Efeito Invisível Insta360 Extensor Retrátil Alumínio Sport - CLICK"    
+    assert categorizar_produto(titulo_bastao_suporte_moto.lower(), 269) == "Suporte"
+
+    titulo_powerbank_portatil = "PowerBank Carregador Portátil 20000 mAh Power Bank Anatel Original A'Gold - A' gold"    
+    assert categorizar_produto(titulo_powerbank_portatil.lower(), 116) == "Carregador"
+
+    titulo_bateria_portatil = "Bateria Portátil Power Bank Magsafe Compativel Com iPhone 11 12 13 14 15 - Single"    
+    assert categorizar_produto(titulo_bateria_portatil.lower(), 125) == "Carregador"
+
+    titulo_carregador_powerbank_lightning = "Powerbank Carregador Portátil 2000mah Lightning Chaveiro - RPC"    
+    assert categorizar_produto(titulo_carregador_powerbank_lightning.lower(), 56) == "Carregador"
+
+    titulo_carregador_portatil_turbo = "2X Carregador Portátil Power Bank Turbo I2Go 20000Mah 20W Co"    
+    assert categorizar_produto(titulo_carregador_portatil_turbo.lower(), 1051) == "Carregador"
+
+    titulo_banco_potencia = "Banco de potência Anker PowerCore 10K 10.000mAh USB-C 5V/3A"    
+    assert categorizar_produto(titulo_banco_potencia.lower(), 285) == "Carregador"
+
+    titulo_carregador_anker = "Anker Carregador Portátil USB tripla S/fio 25.000 mAh Prata"    
+    assert categorizar_produto(titulo_carregador_anker.lower(), 3457) == "Carregador"
+
+    titulo_powerbank_magnetico = "Novo Powerbank Carregador Portátil Magnético 10.000 Mah Universal com 4 Saídas de Carregamento Cor Preto - Power Bank"    
+    assert categorizar_produto(titulo_powerbank_magnetico.lower(), 292) == "Carregador"
+
+    titulo_cabo_usb_turbo = "Cabo Carregador Usb Turbo Compativel Para Fone Xiaomi Red Airdots 2 Top - HREBOS"    
+    assert categorizar_produto(titulo_cabo_usb_turbo.lower(), 27.90) == "Cabo"
+
+def test_detectar_cabo_sem_bundle_extra():
+    titulo = "Cabo Carregador Usb Turbo Compativel Para Fone Xiaomi Red Airdots 2 Top - HREBOS"
+    titulo_low = titulo.lower()
+    preco = 27.90
+
+    cat_base = categorizar_produto(titulo_low, preco)
+    assert cat_base == "Cabo"
+
+    resultado_final = montar_string_bundle(cat_base, titulo_low)
+
+    assert set(resultado_final.split(" + ")) == {"Cabo"}
+    
+    partes = resultado_final.split(" + ")
+    assert set(partes) == {"Cabo"}
 
 def test_detectar_bundle_relogio_pulseira():
     titulo = "Relógio digital Smart inteligente Hw12 41mm com pulseira metal extra - Smart Bracelet"
@@ -144,6 +220,47 @@ def test_detectar_bundle_relogio_pulseira():
     partes = resultado_final.split(" + ")
     assert set(partes) == {"Smartwatch", "Acessório"}
 
+
+def test_detectar_bundle_kit_fone_e_carregador():
+    titulo = "KIT Fone de ouvido tipo c + Carregador 20W TURBO para Samsung M54,A54,S20 fe,20 ultra,S21 - HMT"
+    titulo_low = titulo.lower()
+    preco = 126
+
+    # 1. Primeiro descobre o item principal
+    cat_base = categorizar_produto(titulo_low, preco)
+    assert cat_base == "Áudio"  # Isso deve ser verdade
+
+    # 2. Aplica a lógica de Bundle
+    resultado_final = montar_string_bundle(cat_base, titulo_low)
+
+    # 3. Verifica conjunto
+    assert "Áudio" in resultado_final
+    assert "Carregador" in resultado_final
+    
+    partes = resultado_final.split(" + ")
+    assert set(partes) == {"Áudio", "Carregador"}
+
+    
+
+def test_detectar_bundle_carregador_e_cabo():
+    titulo = "Novo Carregador Portátil Indução Com 4 Cabos 10000 Mah - Envio Imediato - Power Bank"
+    titulo_low = titulo.lower()
+    preco = 129
+
+    # 1. Primeiro descobre o item principal
+    cat_base = categorizar_produto(titulo_low, preco)
+    assert cat_base == "Carregador"  # Isso deve ser verdade
+
+    # 2. Aplica a lógica de Bundle
+    resultado_final = montar_string_bundle(cat_base, titulo_low)
+
+    # 3. Verifica conjunto
+    assert "Carregador" in resultado_final
+    assert "Cabo" in resultado_final
+    
+    partes = resultado_final.split(" + ")
+    assert set(partes) == {"Carregador", "Cabo"}
+
 def test_detectar_bundle_garrafa_smartwatch_fone():
     titulo = "Kit Garrafa térmica 500ml inox sensor Led + Smartwatch Y8 + Fone Bluetooth - KIT ACADEMIA"
     titulo_low = titulo.lower()
@@ -163,6 +280,25 @@ def test_detectar_bundle_garrafa_smartwatch_fone():
 
     partes = resultado_final.split(" + ")
     assert set(partes) == {"Smartwatch", "Acessório", "Áudio"}
+
+def test_detectar_bundle_powerbank_miisso():
+    titulo = "Power Bank miisso 6000mAh x 2 com cabos embutidos para telefones"
+    titulo_low = titulo.lower()
+    preco = 575
+
+    # 1. Primeiro descobre o item principal
+    cat_base = categorizar_produto(titulo_low, preco)
+    assert cat_base == "Carregador"
+
+    # 2. Aplica a lógica de Bundle (O que faltava no teste)
+    resultado_final = montar_string_bundle(cat_base, titulo_low)
+
+    # 3. Verifica conjunto
+    assert "Carregador" in resultado_final
+    assert "Cabo" in resultado_final
+
+    partes = resultado_final.split(" + ")
+    assert set(partes) == {"Carregador", "Cabo"}
 
 def test_detectar_bundle_relogio_sport_e_pulseiras():
     titulo = "Relógio Digital Sport Led Ultra max com pulseira 3 padrão - Blulory"

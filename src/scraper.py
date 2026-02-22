@@ -29,7 +29,7 @@ class MagaluScraper:
 
         # Configura a instância do Selenium com argumentos para evitar bloqueios.
         self.chrome_options = Options()
-        self.chrome_options.add_argument("--headless")
+        # self.chrome_options.add_argument("--headless")
         self.chrome_options.add_argument("--incognito") # modo anônimo
         self.chrome_options.add_argument("--window-size=1920,1080")
         
@@ -102,11 +102,22 @@ class MagaluScraper:
             while True:
 
                 # 1. CONSTRUÇÃO DA URL DINÂMICA
-                pasta_filtro = f"entity---{categoria_alvo.lower()}/" if filtro_aplicado else ""
-                url_final = f"{url_base}{pasta_filtro}?page={pagina}"
+                # pasta_filtro = f"entity---{categoria_alvo.lower()}/" if filtro_aplicado else ""
+                # url_final = f"{url_base}{pasta_filtro}?page={pagina}"
+
+                if pagina == 1:
+                    self.driver.get(url_base)
+                else:
+                    # Usa a URL atual já com filtro aplicado
+                    url_atual = self.driver.current_url
+                    if "page=" in url_atual:
+                        url_atual = re.sub(r'page=\d+', f'page={pagina}', url_atual)
+                    else:
+                        url_atual += f"?page={pagina}"
+                    self.driver.get(url_atual)
                 
                 logging.info(f"--- 📡 Acessando {categoria_alvo} | Página {pagina} ---")
-                self.driver.get(url_final)
+                # self.driver.get(url_final)
                 # Remove qualquer overlay fixo (ex: pop-up no rodapé)
                 self.driver.execute_script("""
                     document.querySelectorAll('div').forEach(el => {
