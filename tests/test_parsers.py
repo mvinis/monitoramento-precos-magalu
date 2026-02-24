@@ -245,6 +245,42 @@ def test_match_categorias():
     titulo_kit_para_galaxy_capa_e_pelicula = "Kit para Galaxy A56 5G Capa Silicone TPU Transparente + Película 3D Frontal Vidro - LXL"
     assert categorizar_produto(titulo_kit_para_galaxy_capa_e_pelicula.lower(), 20.62) == "Proteção"
 
+    titulo_cinto_de_corrida = "Cinto De Corrida Para Maratona Com Suporte Para Gel, Acessórios Para Triatlo E Fitness Ao Ar Livre - hengsong"
+    assert categorizar_produto(titulo_cinto_de_corrida.lower(), 14.19) == "Acessório"
+
+    titulo_fonte_mini_ugreen = "Fonte Mini 30W Ugreen Turbo Suporta 25W 20W 25693 ( ul )"
+    assert categorizar_produto(titulo_fonte_mini_ugreen.lower(), 199.55) == "Carregador"
+
+    titulo_fonte_notebook_acer = "Fonte Compatível com Notebook Acer Aspire A3152195KF AC02 AC02F - Generic"
+    assert categorizar_produto(titulo_fonte_notebook_acer.lower(), 51.51) == "Carregador"
+
+    titulo_grip_para_celular = "Grip para Celular LOVEHANDLE PRO Premium - Silicone Preto com Alça"
+    assert categorizar_produto(titulo_grip_para_celular.lower(), 324) == "Acessório"
+
+    titulo_alto_falante = "Alto-falante de parede FDM Universal One Pair (branco)"
+    assert categorizar_produto(titulo_alto_falante.lower(), 508) == "Áudio"
+
+    titulo_porta_chaves_yubikey = "Porta-chaves Yubikey Protector Flip Case Designz3D"
+    assert categorizar_produto(titulo_porta_chaves_yubikey.lower(), 178.16) == "Outros"
+
+    titulo_fonte_carregador_nintendo = "Fonte Carregador Para Nintendo Switch Bivolt - Knup"
+    assert categorizar_produto(titulo_fonte_carregador_nintendo.lower(), 299) == "Carregador"
+
+    titulo_fonte_carregador_nintendo_switch = "Nintendo Switch Ac Adapter Carregador Fonte Bivolt - Dobe"
+    assert categorizar_produto(titulo_fonte_carregador_nintendo_switch.lower(), 106) == "Carregador"
+
+    titulo_estacion_enfriamiento = "Estación de Enfriamiento y Carga para PS5/Slim/Pro + BRHE"
+    assert categorizar_produto(titulo_estacion_enfriamiento.lower(), 342) == "Acessório"
+
+    titulo_fonte_conversor = "Fonte (conversor) 12v 2a - Dvr - Genérica"
+    assert categorizar_produto(titulo_fonte_conversor.lower(), 18.20) == "Carregador"
+
+    titulo_celular_idosos_positivo = "Celular ideal Para Idosos Positivo P26 Rede 4G mp3 Dual Chip bateria 1000mAh"
+    assert categorizar_produto(titulo_celular_idosos_positivo.lower(), 250) == "Celular Básico"
+
+    titulo_celular_simples_nokia = "Celular Simples Nokia 110 Radio FM Bateria Boa Para Pais Idoso"
+    assert categorizar_produto(titulo_celular_simples_nokia.lower(), 239) == "Celular Básico"
+    
 def test_detectar_cabo_sem_bundle_extra():
     titulo = "Cabo Carregador Usb Turbo Compativel Para Fone Xiaomi Red Airdots 2 Top - HREBOS"
     titulo_low = titulo.lower()
@@ -336,6 +372,23 @@ def test_detectar_bundle_relogio_pulseira():
     partes = resultado_final.split(" + ")
     assert set(partes) == {"Smartwatch", "Acessório"}
 
+def test_detectar_bundle_alca_e_carteira():
+    titulo = "Alça de telefone RENUIS com bolsa com zíper e carteira tiracolo"
+    titulo_low = titulo.lower()
+    preco = 384.64
+
+    # 1. Primeiro descobre o item principal
+    cat_base = categorizar_produto(titulo_low, preco)
+    assert cat_base == "Acessório"  # Isso deve ser verdade
+
+    # 2. Aplica a lógica de Bundle
+    resultado_final = montar_string_bundle(cat_base, titulo_low)
+
+    # 3. Verifica conjunto
+    assert "Acessório" in resultado_final
+    
+    partes = resultado_final.split(" + ")
+    assert set(partes) == {"Acessório"}
 
 def test_detectar_bundle_kit_fone_e_carregador():
     titulo = "KIT Fone de ouvido tipo c + Carregador 20W TURBO para Samsung M54,A54,S20 fe,20 ultra,S21 - HMT"
