@@ -29,7 +29,7 @@ class MagaluScraper:
 
         # Configura a instância do Selenium com argumentos para evitar bloqueios.
         self.chrome_options = Options()
-        # self.chrome_options.add_argument("--headless")
+        self.chrome_options.add_argument("--headless")
         self.chrome_options.add_argument("--incognito") # modo anônimo
         self.chrome_options.add_argument("--window-size=1920,1080")
         

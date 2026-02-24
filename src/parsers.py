@@ -1,5 +1,6 @@
 import re
 import logging
+from rapidfuzz import process, fuzz
 
 def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
     """
@@ -92,9 +93,9 @@ def montar_string_bundle(base, titulo_low):
     
     extras = {
         'película': 'Proteção', 'pelicula': 'Proteção',
-        'caneta': 'Acessório', 'mouse': 'Acessório', 'teclado': 'Acessório', 
+        'caneta': 'Acessório', 'mouse': 'Acessório', 'teclado': 'Acessório', 'antena': 'Acessório',
         'pulseira': 'Acessório', 
-        'capa': 'Capa', 'capinha': 'Capa',
+        'capa': 'Proteção', 'capinha': 'Proteção',
         'fone': 'Áudio', 
         'cabo': 'Cabo',
         'fonte': 'Fonte',
@@ -103,19 +104,30 @@ def montar_string_bundle(base, titulo_low):
         'smartwatch': 'Smartwatch', 'smart watch': 'Smartwatch',
         'smartband': 'Smartband',
         'garrafa': 'Acessório','garrafa térmica': 'Acessório',
+        'celular básico': 'Celular Básico', 'celular rural': 'Celular Básico',
+        'a26' : 'Smartphone',
+        'fit 3': 'Smartband',
+        'galaxy fit': 'Smartband',
+        'mi band': 'Smartband',
+        # --- ATUALIZADO AQUI: Modelos específicos ---
+        'smartwatch': 'Smartwatch', 'smart watch': 'Smartwatch', 'galaxy watch': 'Smartwatch', 'apple watch': 'Smartwatch',
+        'smartband': 'Smartband', 'fit 3': 'Smartband', 'mi band': 'Smartband', 'galaxy fit': 'Smartband',
     }
 
     # Verifica se é um hardware (para ativar a proteção da pulseira)
     is_hardware_principal = any(v in base.lower() for v in ['smartwatch', 'smartband', 'smartphone', 'tablet'])
 
-    tem_combo_real = re.search(r'\b(com|kit|combo|\+| e )\b', titulo_low)
+    # tem_combo_real = re.search(r'\b(com|kit|combo|\+| e )\b', titulo_low)
+    # Libertamos o '+' (e o '&') da regra de fronteira de palavras (\b)
+    tem_combo_real = re.search(r'\b(com|kit|combo|e)\b|\+|&', titulo_low)
 
     # 🔒 TRAVA DEFINITIVA
     if not tem_combo_real:
         return base
 
     for termo, nome_exibicao in extras.items():
-        padrao = rf'\b{re.escape(termo)}s?\b'
+        # padrao = rf'\b{re.escape(termo)}s?\b'
+        padrao = re.escape(termo)
         if re.search(padrao, titulo_low):
 
             if nome_exibicao.lower() in base.lower():
@@ -124,35 +136,11 @@ def montar_string_bundle(base, titulo_low):
             # 👇 NOVA TRAVA
             if not tem_combo_real:
                 continue
-
-    # for termo, nome_exibicao in extras.items():
-    #     padrao = rf'\b{re.escape(termo)}s?\b'
-    #     if re.search(padrao, titulo_low):
-
-    #         # 1. Evita duplicar a própria categoria
-    #         if nome_exibicao.lower() in base.lower():
-    #             continue
-
-    #         # 2. LÓGICA ESPECIAL PARA PULSEIRAS
-    #         if nome_exibicao == "Acessório" and is_hardware_principal and "pulseira" in termo:
                 
-    #             # Regex original do seu código (ajustada para pegar os dois lados)
-    #             # Testando: "pulseira extra" OU "extra pulseira"
-    #             padrao_extra = r'(extra|reserva|kit|\d+|brinde)\s*.*pulseira|pulseira.*\s*(extra|reserva|kit|\d+|brinde)'
-    #             match_extra = re.search(padrao_extra, titulo_low)
-                
-    #             # Regex para "com pulseira"
-    #             match_com = re.search(r'\bcom\b.*\bpulseira', titulo_low)
-
-
-    #             if match_extra or match_com:
-    #                  componentes.append(nome_exibicao)
-    #             else:
-    #                  continue 
-            
-    #         else:
-    #             # Para outros itens, adiciona direto
-    #             componentes.append(nome_exibicao)
+            # Detecta se o hardware principal está só sendo mencionado
+            if is_hardware_principal and "película" in titulo_low:
+                # O produto é só proteção, ignora adicionar Smartwatch
+                tem_combo_real = False
 
     for termo, nome_exibicao in extras.items():
         padrao = rf'\b{re.escape(termo)}s?\b'
@@ -205,8 +193,8 @@ def detectar_bundle(titulo):
     match_qtd_unidades = re.search(r'\b(2|3|4|5|10)\s*(unidades|unid|x|vendas|relogios|smartwatch|fone|kit|par de)', titulo_limpo)
     
     # Padrões de quantidade (Ex: 2 pulseiras)
-    match_acessorios = re.search(r'\d+\s*(pulseiras|fones|películas|peliculas|capas|case|tiras)', titulo_limpo)
-
+    # match_acessorios = re.search(r'\d+\s*(pulseiras|fones|películas|peliculas|capas|case|tiras)', titulo_limpo)
+    match_acessorios = re.search(r'\d+\s*(un|unid|unidades|x)?\s*(pulseiras?|fones?|pel[íi]culas?|capas?|case|tiras?)', titulo_limpo)
     # Detecta pulseira EXTRA
     match_pulseira_extra = re.search(
         r'(com\s+)?pulseira\s+(extra|metal|reserva|adicional|\d+)',
@@ -218,8 +206,22 @@ def detectar_bundle(titulo):
     
     # Palavras-chave de itens extras
     # itens_adicionais = ['brinde', 'kit', 'combo', 'fone de ouvido', 'fone bluetooth', 'cabo', 'fonte', 'fit', 'watch']
+    # itens_adicionais = ['brinde', 'kit', 'combo', 'par de']
+    # tem_item_extra = any(k in titulo_limpo for k in itens_adicionais)
+
+    # 1. Palavras-chave de itens extras (Voltando para a lista segura)
     itens_adicionais = ['brinde', 'kit', 'combo', 'par de']
     tem_item_extra = any(k in titulo_limpo for k in itens_adicionais)
+
+    # 2. DETECTOR CIRÚRGICO DE SOMA EXPLICITA (+)
+    # Procura especificamente se o sinal de + está imediatamente antes de um eletrônico/acessório real.
+    # Ex: Pega "... + Fit 3" e "... + Carregador", mas IGNORA "... + GaNFast" e "... + BR"
+    # padrao_soma = r'\+\s*(fit|watch|buds|airpods|fone|carregador|fonte|cabo|capa|capinha|pel[íi]cula)\b'
+    padrao_soma = r'\+\s*(\d+\s*(un|x|unid|unidades)?\s*)?(fit|watch|buds|airpods|fone|carregador|fonte|cabo|capa|capinha|pel[íi]cula)\b'
+    match_soma_explicita = re.search(padrao_soma, titulo_limpo)
+
+    if match_soma_explicita:
+        return True
 
     # 3. FILTRO FINAL DE SEGURANÇA
     # Se ainda sobrou um sinal, mas o título é carregado de termos técnicos e não tem "kit/brinde"
@@ -255,7 +257,7 @@ def categorizar_produto(titulo, preco):
             "garmin forerunner", "celular de pulso", "relógio digital smart inteligente", "xiaomi watch", "plumzong"
         ],
         "Smartband": [
-            "smartband", "pulseira mi", "smart band", "mi band", "pulseira inteligente", "galaxy fit", "correa", "relógio band",
+            "smartband", "pulseira mi", "smart band", "mi band", "pulseira inteligente", "galaxy fit", "relógio band",
             "fit 3", "d20", "m6", "w69", "gl08", "y68", "fitpro", "hryfine", "m3 band", "m4 band", "xufeng", "relógio smart", "relógio de pulso", "relógio bracelet", " pulseira inteligente ", 
             "s10", "t800", "smartach", "relógio esportivo", "relógio fitness", "xiaomi smart band", "relógio digital sport", "pulseira esportiva"
         ],
@@ -264,17 +266,17 @@ def categorizar_produto(titulo, preco):
         ],
         "Acessório": [
             "pulseira","band", "smarttag", "localizador", "mili mitag", "airtag", "cordão", "bolsa", "carteira", "controle remoto", "garrafa térmica", "moto tag", "pulseira de silicone", "monitor de frequência cardíaca", "pulseira de monitor de frequência cardíaca",
-            "bracelet de silicone"
+            "bracelet de silicone", "antena", "correa"
         ],
         "Suporte": [
-            'suporte', 'suporta', 'tripe', 'tripé', 'bastão', 'pau de selfie', 'selfie', 'estabilizador', 'ring light', 'braçadeira', 'ventosa', 'vara de mão', 'bastão suporte'
+            'suporte', 'suporta', 'tripe', 'tripé', 'bastão', 'pau de selfie', 'estabilizador', 'ring light', 'braçadeira', 'ventosa', 'vara de mão', 'bastão suporte'
         ],
         "Smartphone": [
             "smartphone", "iphone", "galaxy", "motorola", "moto g", " redmi ", "a56", "redemi", "a26",
             "poco", "realme", "14 pro", "15 pro", "s24", "s23", "x7", "128gb", "256gb", "not", "lg k62", "oukitel", "m7", "xiomi celular"
         ],
         "Celular Básico": [
-            "celular basico", "celular para idosos", "idoso", "celular antigo", "nokia 150", "celular 150",
+            "celular basico", "celular para idosos", "idoso", "celular antigo", "nokia 150", "celular 150", "celular rural",
             "2g", "flip", "teclado numerico", "celular do idoso", "celular blu joy", "samsung sm-b310e", "botão grande", "celular simples", "celular lg", "celular nokia", "celular positivo", "Botão SOS"
         ],
         "Console": [
@@ -297,14 +299,23 @@ def categorizar_produto(titulo, preco):
         "Insumos": ["cola", "resina", "ferramenta", "limpeza", "reparo"]
     }
 
+    titulo = corrigir_erros_digitacao(titulo)
     
-    
+
     # 1. TRUNCAGEM
     partes = re.split(r'\b(compatível|compativel| p/ | para | p/| p\. | para a | para o | e )\b', titulo)
     titulo_foco = partes[0]
+    print("TITULO_FOCO:", titulo_foco)
+
+    # titulo_foco_limpo = re.sub(r'^([,\s\dou\d]+x?|kit\s+|combo\s+)', '', titulo_foco).strip()
+    # padrao_aspirador = r'^(([\d,\s]+|ou\s+)+(x|un|unids?|unidades?)?\s*|kit\s+|combo\s+)'
+    # 🧹 O ASPIRADOR DE PREFIXOS (Turbo: agora suga "2 em 1" e roda em loop contínuo)
+    padrao_aspirador = r'^(([\d,\s]+|ou\s+)+(x|un|unids?|unidades?)?\s*|kit\s+|combo\s+|\d+\s*em\s*\d+\s*)+'
+    titulo_foco_limpo = re.sub(padrao_aspirador, '', titulo_foco).strip()
+
     padrao_comp = r'\b(para|p/|compatível|compativel)\b.*\b(mi band|smart band|smartwatch|iphone|galaxy)\b'
 
-    titulo_sem_kit = titulo_foco  # valor padrão
+    titulo_sem_kit = titulo_foco
 
     if titulo_foco.startswith("kit "):
         titulo_sem_kit = re.sub(r'^kit\s+', '', titulo_foco)
@@ -322,6 +333,13 @@ def categorizar_produto(titulo, preco):
         for termo in categorias_map[cat]:
             if re.search(rf'^\b{re.escape(termo)}\b', titulo_sem_kit):
                 return cat
+            
+    # --- FAST TRACK PARA CATEGORIAS IMEDIATAS ---
+    for cat in ["Áudio", "Carregador", "Cabo", "Proteção"]:
+        for termo in categorias_map[cat]:
+            # O 's?' no final permite que ele encontre tanto "película" quanto "películas"
+            if re.search(rf'^\b{re.escape(termo)}s?\b', titulo_foco_limpo):
+                return cat
 
     # 2. ESCUDO DE ACESSÓRIOS (Prioridade Imediata)
     prioridade_imediata = ["Proteção","Carregador", "Cabo", "Suporte", "Acessório", "Áudio", "Insumos"]
@@ -338,12 +356,7 @@ def categorizar_produto(titulo, preco):
                         return cat
                     else:
                         continue
-                
-                # if re.search(padrao_comp, titulo):
-                #     # Só classifica como acessório genérico se não for algo mais específico
-                #     if not any(titulo_foco.startswith(x) for x in ["carregador", "cabo", "fonte", "base carregador"]):
-                #         return "Acessório"
-
+        
                 if cat not in ["Carregador", "Cabo"] and re.search(padrao_comp, titulo):
                     return "Acessório"
 
@@ -356,39 +369,81 @@ def categorizar_produto(titulo, preco):
     # Se o título começa com "relógio inteligente" ou "smartwatch"
         if re.search(r'^(rel[oó]gio inteligente|smartwatch|rel[oó]gio smart)', titulo):
             pass  # continua fluxo normal
+            
+        # 👇 NOVO: O Escudo de Ouro das Capas/Películas!
+        # Se for claramente um item de proteção, blinda a categoria e impede de virar Acessório.
+        # 👇 Escudo de Ouro: Agora olha para o título INTEIRO para resgatar a capa escondida!
+        elif re.search(r'\b(capa|capinha|pel[íi]cula|case)\b', titulo):
+            return "Proteção"
+            
         else:
             return "Acessório"
     
     if re.search(r'\bbateria\b', titulo_foco):
         if re.search(r'\b(para|kit|reposi[cç][aã]o)\b', titulo_foco):
             return "Carregador"
-                
-    # 3. PRIORIDADE HARDWARE
-    ordem_hardware = ["Óculos de Realidade Virtual", "Tablet", "Smartband", "Smartwatch", "Smartphone", "Celular Básico", "Console", "Carregador", "Chip"]
     
-    for cat in ordem_hardware:
-        for termo in categorias_map[cat]:
-            if re.search(rf'\b{re.escape(termo)}\b', titulo_foco):
+    # 🔒 Se for claramente carregador/cabo, não deixar virar smartwatch
+    # if re.search(r'\b(carregador|cabo|fonte|base carregador|power bank|powerbank)\b', titulo):
+    #     return "Carregador"
+    # 🔒 Só classifica como Carregador se for o item principal
+    if re.search(r'^\s*(carregador|cabo|fonte|base carregador|power bank|powerbank)\b', titulo):
+        return "Carregador"
+                        
+    # 3. PRIORIDADE HARDWARE
+    # ordem_hardware = ["Óculos de Realidade Virtual", "Tablet", "Suporte", "Smartphone", "Smartband", "Smartwatch", "Celular Básico", "Console", "Carregador", "Chip"]
+    
+    # for cat in ordem_hardware:
+    #     for termo in categorias_map[cat]:
+    #         if re.search(rf'\b{re.escape(termo)}\b', titulo_foco):
                 
-                # --- TRAVA 1: SEGURANÇA CONTRA CAPAS ---
-                if cat in ["Smartphone", "Tablet"] and preco < 250:
-                    # Se achou termo de smartphone mas é muito barato,
-                    # interrompe a busca NESTA categoria e vai para a próxima (pode ser "Outros" ou "Acessório" depois)
-                    break 
+    #             # --- TRAVA 1: SEGURANÇA CONTRA CAPAS ---
+    #             if cat in ["Smartphone", "Tablet"] and preco < 250:
+    #                 # Se achou termo de smartphone mas é muito barato,
+    #                 # interrompe a busca NESTA categoria e vai para a próxima (pode ser "Outros" ou "Acessório" depois)
+    #                 break 
 
-                # --- TRAVA 2: SEGURANÇA CONTRA "DUAL CHIP" FALSO ---
-                if cat == "Chip" and "celular" in titulo_foco:
-                    continue
+    #             # --- TRAVA 2: SEGURANÇA CONTRA "DUAL CHIP" FALSO ---
+    #             if cat == "Chip" and "celular" in titulo_foco:
+    #                 continue
 
-                # Se passou pelas travas, é isso!
-                return cat
+    #             # Se passou pelas travas, é isso!
+    #             return cat
     
     # 4. BUSCA GLOBAL (Backup)
+    # for cat in ordem_hardware:
+    #     for termo in categorias_map.get(cat, []):
+    #         if re.search(rf'\b{termo}\b', titulo):
+    #             if cat in ["Smartphone", "Tablet"] and preco < 250: continue
+    #             if cat == "Chip" and "celular" in titulo: continue
+    #             return cat
+    ordem_hardware = ["Óculos de Realidade Virtual", "Tablet", "Suporte", "Smartphone", "Smartband", "Smartwatch", "Celular Básico", "Console", "Carregador", "Chip"]
+
+    categorias_detectadas = []
+
     for cat in ordem_hardware:
-        for termo in categorias_map.get(cat, []):
-            if re.search(rf'\b{termo}\b', titulo):
-                if cat in ["Smartphone", "Tablet"] and preco < 250: continue
-                if cat == "Chip" and "celular" in titulo: continue
+        for termo in categorias_map[cat]:
+            if re.search(rf'\b{re.escape(termo)}\b', titulo):
+
+                if cat in ["Smartphone", "Tablet"] and preco < 250:
+                    continue
+
+                if cat == "Chip" and "celular" in titulo:
+                    continue
+
+                if cat not in categorias_detectadas:
+                    categorias_detectadas.append(cat)
+
+    if categorias_detectadas:
+        return categorias_detectadas[0]
+        
+    # 4. BUSCA GLOBAL DE ACESSÓRIOS (A Rede de Segurança)
+    # Para casos onde o vendedor inverte a ordem e coloca o modelo antes do produto (Ex: "G15 Capinha")
+    ordem_acessorios_backup = ["Proteção", "Carregador", "Cabo", "Suporte", "Áudio", "Insumos", "Acessório"]
+    
+    for cat in ordem_acessorios_backup:
+        for termo in categorias_map[cat]:
+            if re.search(rf'\b{re.escape(termo)}\b', titulo_foco):
                 return cat
                 
     return "Outros"
@@ -476,7 +531,7 @@ def calcular_preco_total_parcelado(texto_parcela):
     return 0.0
 
 def capitalizar_categoria(texto):
-    palavras_minusculas = {"de", "da", "do", "das", "dos", "e"}
+    palavras_minusculas = {"de", "da", "do", "das", "dos", "e", "para"}
     
     palavras = texto.split()
     resultado = []
@@ -488,3 +543,43 @@ def capitalizar_categoria(texto):
             resultado.append(palavra.capitalize())
     
     return " ".join(resultado)
+
+def corrigir_erros_digitacao(texto):
+    """
+    Uso de Fuzzy Matching para corrigir erros de digitação comuns no e-commerce.
+    Avalia palavra por palavra e substitui se a similaridade for >= 85%.
+    """
+    # 1. O nosso "Dicionário de Ouro" (Palavras que nos importam)
+    vocabulario_alvo = [
+        "bateria", "película", "carregador", "smartwatch", "smartband", 
+        "pulseira", "capinha", "fone", "bluetooth", "suporte", "cabo"
+    ]
+    
+    # Removemos pontuações grudadas para analisar a palavra pura (ex: "bateira," -> "bateira")
+    palavras = re.findall(r'\b\w+\b', texto.lower())
+    texto_corrigido = texto.lower()
+    
+    for palavra in palavras:
+        # Ignora palavras muito curtas (evita que "de" vire outra coisa)
+        if len(palavra) < 4:
+            continue
+            
+        # 2. A Mágica: Compara a palavra com o nosso vocabulário
+        # Retorna uma tupla: (palavra_correta, score_de_0_a_100, indice)
+        resultado = process.extractOne(palavra, vocabulario_alvo, scorer=fuzz.ratio)
+        
+        if resultado:
+            palavra_correta = resultado[0]
+            score = resultado[1]
+            
+            # 3. A Trava de Segurança (Limiar de Similaridade)
+            # "bateira" vs "bateria" = 85.7% de similaridade
+            # "smartwach" vs "smartwatch" = 94.7%
+            if score >= 85 and score < 100: 
+                # Se for >= 85 mas não for 100 (ou seja, tem erro), substitui no texto final
+                logging.debug(f"🛠️ Fuzzy Match: Corrigindo '{palavra}' para '{palavra_correta}' (Score: {score}%)")
+                
+                # Substitui a palavra errada pela certa no texto usando regex para ser exato
+                texto_corrigido = re.sub(rf'\b{palavra}\b', palavra_correta, texto_corrigido)
+                
+    return texto_corrigido

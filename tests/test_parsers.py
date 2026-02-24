@@ -47,6 +47,8 @@ def test_bundles_reais():
     assert detectar_bundle("Relógio digital Smart inteligente Hw12 41mm com pulseira metal extra - Smart Bracelet") is True
     assert detectar_bundle("Kit de bateria para relógio inteligente Suunto Core Lumi t4 t3 e t1 - Marca Própria") is True
     assert detectar_bundle("Pulseira Inteligente Xiaomi Smart Band 10 Tela AMOLED com 150 modos esportivos, Recursos Premium de Monitoramento e Bateria Até 21 Dias") is False
+    assert detectar_bundle("A26 5G (256GB) - Branco + Fit 3 - Grafite - Samsung") is True
+    assert detectar_bundle("Smartphone Infinix Hot 11S 128GB Verde 4G 6GB RAM 6,78” Câm. Tripla + Selfie 8MP") is False
 
 def test_match_categorias():
     """
@@ -118,7 +120,7 @@ def test_match_categorias():
     assert categorizar_produto(titulo_pulseira_esportiva_nsmart.lower(), 1719.71) == "Acessório"
 
     titulo_correa = "Correa para Reloj Inteligente XIAOMI Mi Smart Watch 10 Resistente al Agua 5ATM"
-    assert categorizar_produto(titulo_correa.lower(), 574.84) == "Smartband"
+    assert categorizar_produto(titulo_correa.lower(), 574.84) == "Acessório"
 
     titulo_carregador_para_mi_band = "Carregador para Mi Band 4 Pulseira Inteligente - KAPBOM"
     assert categorizar_produto(titulo_carregador_para_mi_band.lower(), 89.70) == "Carregador"
@@ -185,6 +187,63 @@ def test_match_categorias():
 
     titulo_cabo_usb_turbo = "Cabo Carregador Usb Turbo Compativel Para Fone Xiaomi Red Airdots 2 Top - HREBOS"    
     assert categorizar_produto(titulo_cabo_usb_turbo.lower(), 27.90) == "Cabo"
+    
+    titulo_tripe_preto = "Tripé Preto Para Celular Flexivel E Camera - DUKIE"
+    assert categorizar_produto(titulo_tripe_preto.lower(), 17.90) == "Suporte"
+
+    titulo_estabilizador_soleste = "Estabilizador De Imagem Soleste Tripé de Mesa Gravação Vídeo Foto Selfie Vlog Suporte Para Celular Universal Cor Branco - Leffa Shop"
+    assert categorizar_produto(titulo_estabilizador_soleste.lower(), 72) == "Suporte"
+
+    titulo_kit_tripe_retratil = "Kit Completo: Tripé Retrátil para Celular + Nota Fiscal - Monac"
+    assert categorizar_produto(titulo_kit_tripe_retratil.lower(), 72) == "Suporte"
+
+    titulo_kit_tripe_aluminio = "Kit Tripé Alumínio Universal 1,02 M Suporte P Celular Câmera - Inboxmobile"
+    assert categorizar_produto(titulo_kit_tripe_aluminio.lower(), 42) == "Suporte"
+
+    titulo_kit_tripe_mesa = "Mini Tripé De Mesa Flexível 360 Suporte Smartphone Vermelho - Worldview"
+    assert categorizar_produto(titulo_kit_tripe_mesa.lower(), 82) == "Suporte"
+
+    titulo_registro_tripe = "Registro Profissional: Tripé Portátil para Smartphones e Câmeras - Entrega Expressa - Monac"
+    assert categorizar_produto(titulo_registro_tripe.lower(), 72.80) == "Suporte"
+
+    titulo_teleprompter_baby = "Teleprompter Baby Retrátil 11+ Tripé + Suporte Smartphone - Texano"
+    assert categorizar_produto(titulo_teleprompter_baby.lower(), 726.30) == "Suporte"
+
+    titulo_carregador_classic = "2X Carregador Samsung Galaxy Watch Classic 4 3 Active2, Cabo"
+    assert categorizar_produto(titulo_carregador_classic.lower(), 184) == "Carregador"
+
+    titulo_peliculas_hidrogel = "1,3 ou 5 Películas Hidrogel HD Para Garmin Forerunner 965 955 745 645 6265 255 620 630 225 230 235 2 - São Jorge Fábrica e Distribuidora"
+    assert categorizar_produto(titulo_peliculas_hidrogel.lower(), 31) == "Proteção"
+
+    titulo_bateria_compativel = "Bateira Compatível Galaxy M14 5g Bm146aby Nfe."
+    assert categorizar_produto(titulo_bateria_compativel.lower(), 198) == "Carregador"
+
+    titulo_smartphone_celular_xiaomi = "Smartphone Celular Xiaomi Redmi Note 14 PRO 5G 256GB 8GB NFC Câmera tripla 200MP 4K Tela AMOLED 120Hz Aparelho Premium com IA Carregador 45W Atmos"
+    assert categorizar_produto(titulo_smartphone_celular_xiaomi.lower(), 2500) == "Smartphone"
+
+    titulo_smartphone_celular_xiaomi = "Xiaomi Poco X7 Pro 512GB / 12GB RAM, Preto, Camera 50 Mpx,NFC, 5G, Carregador 90W, Tela de 6,67', Dual SIM, Lançamento 2025"
+    assert categorizar_produto(titulo_smartphone_celular_xiaomi.lower(), 3387) == "Smartphone"
+
+    titulo_smartphone_infinix = "Smartphone Infinix Hot 11S 128GB Verde 4G 6GB RAM 6,78” Câm. Tripla + Selfie 8MP"
+    assert categorizar_produto(titulo_smartphone_infinix.lower(), 999.10) == "Smartphone"
+
+    titulo_smartphone_motorola_edge_pro = "Smartphone Motorola Edge 60 Pro 5G - Azul, 256GB, RAM 24GB (12GB RAM+12GB Ram Boost), Câmera 50MP, Selfie 50MP e Tela de 6,7"
+    assert categorizar_produto(titulo_smartphone_motorola_edge_pro.lower(), 3499) == "Smartphone"
+
+    titulo_smartphone_motorola_edge_pro = "Xiaomi Poco C75 128GB Global 6GB Preto 4G Tela com Baixa Luz Azul Selfie IA RAM até 16GB"
+    assert categorizar_produto(titulo_smartphone_motorola_edge_pro.lower(), 1225) == "Smartphone"
+
+    titulo_pelicula_vidro_unidade = "3UN Película 3D De Vidro Privacidade + 1UN Capinha Capa Anti Impacto para Iphone 14 - LXL"
+    assert categorizar_produto(titulo_pelicula_vidro_unidade.lower(), 34.37) == "Proteção"
+
+    titulo_capinha_moto_g = "G15 Capinha Moto G15 Case Reforçada Silicone Transparente Flexível Anti Choque Proteção De Câmera e Pelicula Motorola G15 Vidro 3D Cobertura Total - Phonecell"
+    assert categorizar_produto(titulo_capinha_moto_g.lower(), 17.19) == "Proteção"
+
+    titulo_kit_capa_transparente = "Kit 2 em 1 Capa Transparente + Película 3D De Vidro para Samsung Galaxy M52 5G - PREMIUM"
+    assert categorizar_produto(titulo_kit_capa_transparente.lower(), 19.34) == "Proteção"
+
+    titulo_kit_para_galaxy_capa_e_pelicula = "Kit para Galaxy A56 5G Capa Silicone TPU Transparente + Película 3D Frontal Vidro - LXL"
+    assert categorizar_produto(titulo_kit_para_galaxy_capa_e_pelicula.lower(), 20.62) == "Proteção"
 
 def test_detectar_cabo_sem_bundle_extra():
     titulo = "Cabo Carregador Usb Turbo Compativel Para Fone Xiaomi Red Airdots 2 Top - HREBOS"
@@ -200,6 +259,63 @@ def test_detectar_cabo_sem_bundle_extra():
     
     partes = resultado_final.split(" + ")
     assert set(partes) == {"Cabo"}
+
+def test_detectar_a26_e_smartband():
+    titulo = "A26 5G (256GB) - Branco + Fit 3 - Grafite - Samsung"
+    titulo_low = titulo.lower()
+    preco = 2998
+
+    cat_base = categorizar_produto(titulo_low, preco)
+    assert cat_base == "Smartphone"
+
+    # 2. Aplica a lógica de Bundle
+    resultado_final = montar_string_bundle(cat_base, titulo_low)
+
+    # 3. Verifica conjunto
+    assert "Smartphone" in resultado_final
+    assert "Smartband" in resultado_final
+    
+    partes = resultado_final.split(" + ")
+    assert set(partes) == {"Smartphone", "Smartband"}
+
+def test_detectar_correa_xiaomi_e_pelicula():
+    titulo = "Correa Para Xiaomi Redmi Watch 4 - Silicone + Pelicula 3D - Tech King"
+    titulo_low = titulo.lower()
+    preco = 65
+
+    cat_base = categorizar_produto(titulo_low, preco)
+    assert cat_base == "Acessório"
+
+    # 2. Aplica a lógica de Bundle
+    resultado_final = montar_string_bundle(cat_base, titulo_low)
+
+    # 3. Verifica conjunto
+    assert "Acessório" in resultado_final
+    assert "Proteção" in resultado_final
+    
+    partes = resultado_final.split(" + ")
+    assert set(partes) == {"Acessório", "Proteção"}
+
+def test_detectar_celular_rural_com_cabo():
+    titulo = "Kit Celular Rural 4G Pro connect com wifi + Antena + Cabo 10m - PROELETRONIC"
+    titulo_low = titulo.lower()
+    preco = 735
+
+    cat_base = categorizar_produto(titulo_low, preco)
+    assert cat_base == "Celular Básico"
+
+    # 2. Aplica a lógica de Bundle
+    resultado_final = montar_string_bundle(cat_base, titulo_low)
+
+    # 3. Verifica conjunto
+    assert "Celular Básico" in resultado_final
+    assert "Cabo" in resultado_final
+    assert "Acessório" in resultado_final
+    
+    partes = resultado_final.split(" + ")
+    assert set(partes) == {"Celular Básico", "Cabo", "Acessório"}
+
+    
 
 def test_detectar_bundle_relogio_pulseira():
     titulo = "Relógio digital Smart inteligente Hw12 41mm com pulseira metal extra - Smart Bracelet"
