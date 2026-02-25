@@ -49,6 +49,7 @@ def test_bundles_reais():
     assert detectar_bundle("Pulseira Inteligente Xiaomi Smart Band 10 Tela AMOLED com 150 modos esportivos, Recursos Premium de Monitoramento e Bateria Até 21 Dias") is False
     assert detectar_bundle("A26 5G (256GB) - Branco + Fit 3 - Grafite - Samsung") is True
     assert detectar_bundle("Smartphone Infinix Hot 11S 128GB Verde 4G 6GB RAM 6,78” Câm. Tripla + Selfie 8MP") is False
+    assert detectar_bundle("Pulseira inteligente com sensor de toque Smartband M7 - altomex") is False
 
 def test_match_categorias():
     """
@@ -280,7 +281,79 @@ def test_match_categorias():
 
     titulo_celular_simples_nokia = "Celular Simples Nokia 110 Radio FM Bateria Boa Para Pais Idoso"
     assert categorizar_produto(titulo_celular_simples_nokia.lower(), 239) == "Celular Básico"
+
+    titulo_celular_multilaser = "Celular Multilaser Up Play Dual Chip 1.8' Preto Bluetooth 3G USB Câmera - P9134"
+    assert categorizar_produto(titulo_celular_multilaser.lower(), 155) == "Celular Básico"
     
+    titulo_pelicula_temperado = "Pellicula Para relogio redmi watch 5 lite Vidro 9h Temperado - Genérica"
+    assert categorizar_produto(titulo_pelicula_temperado.lower(), 22) == "Proteção"
+
+    titulo_protetor_de_tela_anti_impacto = "Protetor De Tela Anti Impacto Para Tablet Lenovo M9 9 2020 - XILA"
+    assert categorizar_produto(titulo_protetor_de_tela_anti_impacto.lower(), 29.60) == "Proteção"
+
+    titulo_espatula_de_pa = "2 Espatulas Pá De Aplicação Película Filme Hidrogel Tablet - Global Revolution"
+    assert categorizar_produto(titulo_espatula_de_pa.lower(), 28) == "Insumos"
+    
+    titulo_placa_dock_carga = "Placa dock de carga TURBO celular MOTOROLA modelo G23"
+    assert categorizar_produto(titulo_placa_dock_carga.lower(), 35) == "Outros"
+
+    titulo_flex_power = "Flex power e volume celular NOKIA modelo NOKIA XL"
+    assert categorizar_produto(titulo_flex_power.lower(), 20) == "Outros"
+
+    titulo_flex_volume_celular = "Flex volume celular LG modelo K11 e K11 PLUS"
+    assert categorizar_produto(titulo_flex_volume_celular.lower(), 20) == "Outros"
+
+    titulo_dock_carga_turbo = "Dock de carga TURBO celular MOTOROLA modelo G100"
+    assert categorizar_produto(titulo_dock_carga_turbo.lower(), 35) == "Outros"
+
+    titulo_flex_carga_dock = "Flex De Carga Dock Para 4g Preto - Inova"
+    assert categorizar_produto(titulo_flex_carga_dock.lower(), 8.50) == "Outros"
+
+    titulo_place_flex_conector = "Placa flex conector de carga+antena+vibra+microfone ze550kl - ASUS BRASIL"
+    assert categorizar_produto(titulo_place_flex_conector.lower(), 30.47) == "Outros"
+
+    titulo_reparo_tela_iphone = "Kit de reparo de tela para iPhone 11 - preto - JOTTING TRADING"
+    assert categorizar_produto(titulo_reparo_tela_iphone.lower(), 340) == "Outros"
+
+    titulo_protetores_de_tela = "Pacote com 2 protetores de tela foscos EZ-GLAZ para iPhone 15 Plus/16 Plus"
+    assert categorizar_produto(titulo_protetores_de_tela.lower(), 328) == "Proteção"
+
+    titulo_botoes_gatilho = "10 PCS Botões De Gatilho R2 L2 Com Molas Para Controle PS5 PS4 pro Slim IVYUEEN"
+    assert categorizar_produto(titulo_botoes_gatilho.lower(), 13) == "Outros"
+
+    titulo_kit_botoes_de_gatilho = "Kit De Botões De Gatilho Para Controle Sony PS5 L1 R1 L2 R2 Com Suporte LR E Mola Para BDM-010 020 - TingDong"
+    assert categorizar_produto(titulo_kit_botoes_de_gatilho.lower(), 13) == "Outros"
+
+    titulo_reparo_controle_console = "Kit De Reparo Para Controle PS4: Borrachas Condutivas, Botões De Gatilho L1 R1 L2 R2, Joysticks 3D E - JCD"
+    assert categorizar_produto(titulo_reparo_controle_console.lower(), 18) == "Outros"
+
+    titulo_escova_aspirador = "Escova Principal Para Aspirador Robô Xiaomi X10 X20 S10 plus S20 plus X20 Max D109GL - Acessórios - OEMG"
+    assert categorizar_produto(titulo_escova_aspirador.lower(), 25) == "Outros"
+
+    titulo_celualr_nokia = "Celualr nokia 110 4g dual chip radio fm bluetooth lanterna"
+    assert categorizar_produto(titulo_celualr_nokia.lower(), 363) == "Celular Básico"
+
+    titulo_celular_idoso_ligacao = "Celular p/ Idoso Ligação, Rádio e Câmera Multilaser UP Play Garantia e Nf"
+    assert categorizar_produto(titulo_celular_idoso_ligacao.lower(), 1463) == "Celular Básico"
+
+    titulo_celular_barato = "Celular Barato Fácil Dual Chip Fm Câmera Gps Positivo P26"
+    assert categorizar_produto(titulo_celular_barato.lower(), 811) == "Celular Básico"
+
+    titulo_amazfit_band = "Amazfit Band 9 Active Preta"
+    assert categorizar_produto(titulo_amazfit_band.lower(), 240) == "Smartband"
+
+    titulo_relogios_smart_digital = "2 Relógios Smart Digital Kit Mozão X Pro Original Masculino E Feminino Envio Já - SVD Store"
+    assert categorizar_produto(titulo_relogios_smart_digital.lower(), 280) == "Smartwatch"
+
+    titulo_fone_bluetooth_inpods = "Fone Bluetooth inPods sem fio Relógio digital esportivo Masculino e Feminino - Unity"
+    assert categorizar_produto(titulo_fone_bluetooth_inpods.lower(), 33) == "Áudio"
+
+    titulo_pulseira_inteligente_sensor = "Pulseira inteligente com sensor de toque Smartband M7 - altomex"
+    assert categorizar_produto(titulo_pulseira_inteligente_sensor.lower(), 42) == "Smartband"
+
+    titulo_relogio_digital_esporte_bracelete = "Relógio Digital Esporte Bracelete Masculino Feminino Barato - 01Smart"
+    assert categorizar_produto(titulo_relogio_digital_esporte_bracelete.lower(), 35.90) == "Smartwatch"
+
 def test_detectar_cabo_sem_bundle_extra():
     titulo = "Cabo Carregador Usb Turbo Compativel Para Fone Xiaomi Red Airdots 2 Top - HREBOS"
     titulo_low = titulo.lower()
@@ -294,7 +367,7 @@ def test_detectar_cabo_sem_bundle_extra():
     assert set(resultado_final.split(" + ")) == {"Cabo"}
     
     partes = resultado_final.split(" + ")
-    assert set(partes) == {"Cabo"}
+    assert set(partes) == {"Cabo"}    
 
 def test_detectar_a26_e_smartband():
     titulo = "A26 5G (256GB) - Branco + Fit 3 - Grafite - Samsung"
@@ -314,6 +387,25 @@ def test_detectar_a26_e_smartband():
     partes = resultado_final.split(" + ")
     assert set(partes) == {"Smartphone", "Smartband"}
 
+
+def test_detectar_a26_e_smartband():
+    titulo = "Xiaomi 14T NFC Dual SIM de 512/12GB - Titan Black + FONE SEM FIO"
+    titulo_low = titulo.lower()
+    preco = 4890
+
+    cat_base = categorizar_produto(titulo_low, preco)
+    assert cat_base == "Smartphone"
+
+    # 2. Aplica a lógica de Bundle
+    resultado_final = montar_string_bundle(cat_base, titulo_low)
+
+    # 3. Verifica conjunto
+    assert "Smartphone" in resultado_final
+    assert "Áudio" in resultado_final
+    
+    partes = resultado_final.split(" + ")
+    assert set(partes) == {"Smartphone", "Áudio"}
+
 def test_detectar_correa_xiaomi_e_pelicula():
     titulo = "Correa Para Xiaomi Redmi Watch 4 - Silicone + Pelicula 3D - Tech King"
     titulo_low = titulo.lower()
@@ -332,6 +424,26 @@ def test_detectar_correa_xiaomi_e_pelicula():
     partes = resultado_final.split(" + ")
     assert set(partes) == {"Acessório", "Proteção"}
 
+def test_detectar_correa_xiaomi_e_pelicula():
+    titulo = "Kit Presente: Relógio inteligente HW ULTRA 2 chat GPT integrado + Fone Bluetooth PRO9 +7 pulseiras + Coração de Pelúcia - WearFit"
+    titulo_low = titulo.lower()
+    preco = 269
+
+    cat_base = categorizar_produto(titulo_low, preco)
+    assert cat_base == "Smartwatch"
+
+    # 2. Aplica a lógica de Bundle
+    resultado_final = montar_string_bundle(cat_base, titulo_low)
+
+    # 3. Verifica conjunto
+    assert "Smartwatch" in resultado_final
+    assert "Acessório" in resultado_final
+    assert "Áudio" in resultado_final
+    assert "Outros" in resultado_final
+    
+    partes = resultado_final.split(" + ")
+    assert set(partes) == {"Smartwatch", "Acessório", "Áudio", "Outros"}
+    
 def test_detectar_celular_rural_com_cabo():
     titulo = "Kit Celular Rural 4G Pro connect com wifi + Antena + Cabo 10m - PROELETRONIC"
     titulo_low = titulo.lower()
@@ -437,14 +549,14 @@ def test_detectar_bundle_garrafa_smartwatch_fone():
 
     # 1. Primeiro descobre o item principal
     cat_base = categorizar_produto(titulo_low, preco)
-    assert cat_base == "Smartwatch"
+    assert cat_base == "Acessório"
 
     # 2. Aplica a lógica de Bundle (O que faltava no teste)
     resultado_final = montar_string_bundle(cat_base, titulo_low)
 
     # 3. Verifica conjunto
-    assert "Smartwatch" in resultado_final
     assert "Acessório" in resultado_final
+    assert "Smartwatch" in resultado_final
     assert "Áudio" in resultado_final
 
     partes = resultado_final.split(" + ")

@@ -109,16 +109,14 @@ def montar_string_bundle(base, titulo_low):
         'fit 3': 'Smartband',
         'galaxy fit': 'Smartband',
         'mi band': 'Smartband',
-        # --- ATUALIZADO AQUI: Modelos específicos ---
         'smartwatch': 'Smartwatch', 'smart watch': 'Smartwatch', 'galaxy watch': 'Smartwatch', 'apple watch': 'Smartwatch',
         'smartband': 'Smartband', 'fit 3': 'Smartband', 'mi band': 'Smartband', 'galaxy fit': 'Smartband',
+        'reparo de tela':'Outros',
+        'pelúcia':'Outros'
     }
 
     # Verifica se é um hardware (para ativar a proteção da pulseira)
     is_hardware_principal = any(v in base.lower() for v in ['smartwatch', 'smartband', 'smartphone', 'tablet'])
-
-    # tem_combo_real = re.search(r'\b(com|kit|combo|\+| e )\b', titulo_low)
-    # Libertamos o '+' (e o '&') da regra de fronteira de palavras (\b)
     tem_combo_real = re.search(r'\b(com|kit|combo|e)\b|\+|&', titulo_low)
 
     # 🔒 TRAVA DEFINITIVA
@@ -126,7 +124,6 @@ def montar_string_bundle(base, titulo_low):
         return base
 
     for termo, nome_exibicao in extras.items():
-        # padrao = rf'\b{re.escape(termo)}s?\b'
         padrao = re.escape(termo)
         if re.search(padrao, titulo_low):
 
@@ -193,7 +190,6 @@ def detectar_bundle(titulo):
     match_qtd_unidades = re.search(r'\b(2|3|4|5|10)\s*(unidades|unid|x|vendas|relogios|smartwatch|fone|kit|par de)', titulo_limpo)
     
     # Padrões de quantidade (Ex: 2 pulseiras)
-    # match_acessorios = re.search(r'\d+\s*(pulseiras|fones|películas|peliculas|capas|case|tiras)', titulo_limpo)
     match_acessorios = re.search(r'\d+\s*(un|unid|unidades|x)?\s*(pulseiras?|fones?|pel[íi]culas?|capas?|case|tiras?)', titulo_limpo)
     # Detecta pulseira EXTRA
     match_pulseira_extra = re.search(
@@ -220,8 +216,10 @@ def detectar_bundle(titulo):
 
     # 3. FILTRO FINAL DE SEGURANÇA
     # Se ainda sobrou um sinal, mas o título é carregado de termos técnicos e não tem "kit/brinde"
+   # 3. FILTRO FINAL DE SEGURANÇA
     if tem_sinal and not tem_item_extra and not bool(match_acessorios):
-        termos_specs = ['br', 'nfc', 'nf', 'gb', 'mb', '5g', '4g', 'dual', 'sim', 'mah', 'bateria', 'biometria', 'nfe', 'camera', 'samsung xiaomi', 'ganfast', 'mp', 'usb', 'gps']
+        # Lista atualizada com 'sensor', 'toque', 'tela', 'bluetooth', etc.
+        termos_specs = ['br', 'nfc', 'nf', 'gb', 'mb', '5g', '4g', 'dual', 'sim', 'mah', 'bateria', 'biometria', 'nfe', 'camera', 'samsung xiaomi', 'ganfast', 'mp', 'usb', 'gps', 'sensor', 'tela', 'toque', 'led', 'lcd', 'bluetooth', 'wifi', 'wi-fi', 'medidor', 'monitor']
         if any(t in titulo_limpo for t in termos_specs):
             return False
     
@@ -262,11 +260,12 @@ def categorizar_produto(titulo, preco):
     print("ANTES", titulo)
     titulo = corrigir_erros_digitacao(titulo)
     print("DEPOIS", titulo)
+
     # 1. TRUNCAGEM
-    partes = re.split(r'\b(compatível|compativel| p/ | para | p/| p\. | para a | para o | e )\b', titulo)
+    partes = re.split(r'\b(compatível|compativel| p/ (?!idosos?)| para (?!idosos?)| p/(?!idosos?)| p\. (?!idosos?)| p\.(?!idosos?)| para a | para o | e )\b', titulo)
     titulo_foco = partes[0]
 
-    padrao_aspirador = r'^(([\d,\s]+|ou\s+)+(x|un|unids?|unidades?)?\s*|kit\s+|combo\s+|\d+\s*em\s*\d+\s*)+'
+    padrao_aspirador = r'^(([\d,\s]+|ou\s+)+(x|un|unids?|unidades?|pcs|pe[çc]as?)?\s*|kit\s+(de\s+)?|combo\s+(de\s+)?|pacote\s+(com\s+)?|\d+\s*em\s*\d+\s*)+'
     titulo_foco_limpo = re.sub(padrao_aspirador, '', titulo_foco).strip()
 
     padrao_comp = r'\b(para|p/|compatível|compativel)\b.*\b(mi band|smart band|smartwatch|iphone|galaxy)\b'
@@ -285,12 +284,9 @@ def categorizar_produto(titulo, preco):
         titulo_sem_kit = re.sub(r'^kit\s+', '', titulo_foco)
     
     # PROTEÇÃO CONTRA ESPECIFICAÇÃO DE BATERIA
-    # 🔹 Corrigido: Ignora bateria como especificação
     if re.search(r'\bbateria\b', titulo, re.IGNORECASE):
-        # Se baterias tipo "1000mAh", "até 21 dias", "duração 2 dias", ignora
         if re.search(r'\d+\s*mah|\d+\s*dias|de|até|duração', titulo, re.IGNORECASE):
-            pass  # é especificação, não carregador
-        # Se for "kit de bateria", "bateria de reposição", "bateria portátil" → Carregador
+            pass
         elif re.search(r'\b(kit de bateria|bateria de reposi[cç][aã]o|bateria portátil|bateria celular avulsa)\b', titulo, re.IGNORECASE):
             return "Carregador"
         
@@ -310,10 +306,10 @@ def categorizar_produto(titulo, preco):
                 return cat
 
     # 2. ESCUDO DE ACESSÓRIOS (Prioridade Imediata)
-    prioridade_imediata = ["Proteção","Carregador", "Cabo", "Suporte", "Acessório", "Áudio", "Insumos"]
+    prioridade_imediata = ["Proteção","Carregador", "Cabo", "Suporte", "Acessório", "Áudio", "Insumos", "Outros"]
     for cat in prioridade_imediata:
         for termo in categorias_map[cat]:
-            if re.search(rf'^\s*{re.escape(termo)}\b', titulo_foco):
+            if re.search(rf'^\s*{re.escape(termo)}\b', titulo_foco_limpo):
                 
                 if termo == "pulseira":
                     if re.search(r'\b(smart|mi|xiaomi|inteligente)\b', titulo_foco):
@@ -325,11 +321,6 @@ def categorizar_produto(titulo, preco):
                     else:
                         continue
         
-                if cat not in ["Carregador", "Cabo"] and re.search(padrao_comp, titulo):
-                    return "Acessório"
-
-                if cat == "Acessório":
-                    return cat
                     
                 return cat
     
@@ -338,7 +329,8 @@ def categorizar_produto(titulo, preco):
         if re.search(r'^(rel[oó]gio inteligente|smartwatch|rel[oó]gio smart)', titulo):
             pass
             
-        elif re.search(r'\b(capa|capinha|pel[íi]cula|case)\b', titulo):
+        # Adicionamos variações de protetor de tela na trava de segurança
+        elif re.search(r'\b(capa|capinha|pel[íi]cula|case|protetor(es)? de tela)\b', titulo, re.IGNORECASE):
             return "Proteção"
             
         else:
@@ -353,7 +345,7 @@ def categorizar_produto(titulo, preco):
 
     for cat in ordem_hardware:
         for termo in categorias_map[cat]:
-            if re.search(rf'\b{re.escape(termo)}s?\b', titulo, re.IGNORECASE):
+            if re.search(rf'\b{re.escape(termo)}s?\b', titulo_foco, re.IGNORECASE):
 
                 if cat in ["Smartphone", "Tablet"] and preco < 250:
                     continue
@@ -372,12 +364,8 @@ def categorizar_produto(titulo, preco):
     
     for cat in ordem_acessorios_backup:
         for termo in categorias_map[cat]:
-            if cat == "Proteção":
-                if re.search(r'\b(smartphone|tablet|watch|smartwatch|celular)\b', titulo_foco.lower()) \
-                   or detectar_bundle(titulo_foco):
-                    return cat
-                else:
-                    continue
+            if re.search(rf'\b{re.escape(termo)}s?\b', titulo, re.IGNORECASE):
+                return cat
                 
     return "Outros"
 
@@ -484,40 +472,15 @@ def corrigir_erros_digitacao(texto):
     """
     # 1. "Dicionário de Ouro" (Palavras que nos importam)
     vocabulario_alvo = [
-        "bateria", "película", "carregador", "smartwatch", "smartband", 
-        "pulseira", "capinha", "fone", "bluetooth", "cabo", "fonte"
+        "bateria", "película", "pelicula", "carregador", "smartwatch", "smartband", 
+        "pulseira", "capinha", "fone", "bluetooth", "cabo", "fonte", "celular"
     ]
     
     palavras = re.findall(r'\b\w+\b', texto.lower())
     texto_corrigido = texto.lower()
-    
-    # for palavra in palavras:
-    #     # Ignora palavras muito curtas (evita que "de" vire outra coisa)
-    #     if len(palavra) < 4:
-    #         continue
-            
-    #     # 2. A Mágica: Compara a palavra com o nosso vocabulário
-    #     # Retorna uma tupla: (palavra_correta, score_de_0_a_100, indice)
-    #     resultado = process.extractOne(palavra, vocabulario_alvo, scorer=fuzz.ratio)
-        
-    #     if resultado:
-    #         palavra_correta = resultado[0]
-    #         score = resultado[1]
-            
-    #         # 3. A Trava de Segurança (Limiar de Similaridade)
-    #         # "bateira" vs "bateria" = 85.7% de similaridade
-    #         # "smartwach" vs "smartwatch" = 94.7%
-    #         if score >= 85 and score < 100: 
-    #             # Se for >= 85 mas não for 100 (ou seja, tem erro), substitui no texto final
-    #             logging.debug(f"🛠️ Fuzzy Match: Corrigindo '{palavra}' para '{palavra_correta}' (Score: {score}%)")
-                
-    #             # Substitui a palavra errada pela certa no texto usando regex para ser exato
-    #             texto_corrigido = re.sub(rf'\b{palavra}\b', palavra_correta, texto_corrigido)
 
     for palavra in palavras:
 
-        # 🔒 Só tenta corrigir se a palavra estiver
-        # relativamente próxima de algum termo do vocabulário
         resultado = process.extractOne(palavra, vocabulario_alvo, scorer=fuzz.ratio)
 
         if not resultado:
@@ -551,25 +514,7 @@ def get_categorias_multilingue():
     A função combina categorias principais em português com extensões em espanhol, permitindo
     a classificação ou detecção de produtos com base em palavras-chave. Cada categoria é
     mapeada para uma lista de termos que podem aparecer em títulos de produtos ou descrições.
-
-    Categorias incluídas (não exaustivo):
-        - Proteção
-        - Óculos de Realidade Virtual
-        - Carregador
-        - Smartwatch
-        - Smartband
-        - Tablet
-        - Acessório
-        - Suporte
-        - Smartphone
-        - Celular Básico
-        - Console
-        - Cabo
-        - Áudio
-        - Chip
-        - Outros
-        - Insumos
-
+    
     Retorno:
         dict: Dicionário onde cada chave é uma categoria e o valor é uma lista de termos
               em português e espanhol associados àquela categoria.
@@ -578,7 +523,7 @@ def get_categorias_multilingue():
     categorias_pt = {
         
             "Proteção": [
-                "capa", "capinha", "case", "pelicula", "película", "vidro temperado", "anti queda"
+                "capa", "capinha", "case", "pelicula", "película", "vidro temperado", "anti queda", "vidro temperado", "protetor de tela", "protetores de tela"
             ],
             "Óculos de Realidade Virtual": [
                 "óculos vr", "óculos inteligente", "vr", "óculos de realidade virtual", "óculos vr realidade virtual"
@@ -590,12 +535,13 @@ def get_categorias_multilingue():
             "Smartwatch": [
                 "smartwatch", "apple watch", "galaxy watch", "relogio inteligente", "smart watch", "microwear",
                 "relógio inteligente", "hw", "hw12", "w28", "ultra 9", "series 9", "relógio smart", "gps", "relógio smartwatch", "relógio smart watch", 
-                "garmin forerunner", "celular de pulso", "relógio digital smart inteligente", "xiaomi watch", "plumzong"
+                "garmin forerunner", "celular de pulso", "relógio digital", "relógio digital smart inteligente", "xiaomi watch", "plumzong", "smart digital"
             ],
             "Smartband": [
                 "smartband", "pulseira mi", "smart band", "mi band", "pulseira inteligente", "galaxy fit", "relógio band",
-                "fit 3", "d20", "m6", "w69", "gl08", "y68", "fitpro", "hryfine", "m3 band", "m4 band", "xufeng", "relógio smart", "relógio de pulso", "relógio bracelet", " pulseira inteligente ", 
-                "s10", "t800", "smartach", "relógio esportivo", "relógio fitness", "xiaomi smart band", "relógio digital sport", "pulseira esportiva"
+                "fit 3", "d20", "m6", "w69", "gl08", "y68", "fitpro", "hryfine", "m3 band", "m4 band", "xufeng", "relógio smart", 
+                "relógio de pulso", "relógio bracelet", " pulseira inteligente ", "s10", "t800", "smartach", "relógio esportivo", 
+                "relógio fitness", "xiaomi smart band", "relógio digital sport", "pulseira esportiva", "amazfit band"
             ],
             "Tablet": [
                 "tablet", "ipad", "galaxy tab", "xiaomi pad", "lenovo tab"
@@ -609,11 +555,13 @@ def get_categorias_multilingue():
             ],
             "Smartphone": [
                 "smartphone", "iphone", "galaxy", "motorola", "moto g", " redmi ", "a56", "redemi", "a26",
-                "poco", "realme", "14 pro", "15 pro", "s24", "s23", "x7", "128gb", "256gb", "not", "lg k62", "oukitel", "m7", "xiomi celular"
+                "poco", "realme", "14 pro", "15 pro", "s24", "s23", "x7", "128gb", "256gb", "not", "lg k62", "oukitel", "m7", "xiomi celular", 'xiaomi 14t'
             ],
             "Celular Básico": [
                 "celular basico", "celular para idoso", "celular para idosos", "idoso", "idosos", "celular antigo", "nokia 150", "celular 150", "celular rural",
-                "2g", "teclado numerico", "celular do idoso", "celular blu joy", "samsung sm-b310e", "botão grande", "celular simples", "celular lg", "celular nokia", "celular positivo", "Botão SOS"
+                "2g", "teclado numerico", "celular do idoso", "celular blu joy", "samsung sm-b310e", "botão grande", "celular simples", "celular lg", "celular nokia", "celular positivo", "Botão SOS",
+                "multilaser up", "up play", "p9134", "tela 1.8", "tela 2.4", "feature phone", "celular p/ idoso", 
+                "positivo p2", "positivo p26", "celular fácil", "celular de tecla"
             ],
             "Console": [
                 "console", "playstation", "ps5", "xbox", "nintendo switch", "gamepad", "joystick", "dualsense", "controle de videogame"
@@ -622,23 +570,24 @@ def get_categorias_multilingue():
             # 3. ACESSÓRIOS (Para captar antes do hardware)
             
             "Cabo": [
-                "cabo usb", "cabo tipo c", "cabo"
+                "cabo usb", "cabo tipo c", "cabo", "cabo lightning", "cabo micro usb", "cabo de dados", "cabo de carregamento", "cabo de carga", "cabo de energia", "cabo de sincronização"
             ],
             
             "Áudio": [
-                "fone de ouvido", "headset", "earbuds", "airpods", "galaxy buds", "alto-falante"
+                "fone de ouvido", "headset", "earbuds", "airpods", "galaxy buds", "alto-falante", "fone bluetooth", "fones sem fio", "fone sem fio", "fone bluetooth", "caixa de som", "caixa de som bluetooth", "caixa de som portátil"
             ],
             
             # 4. OUTROS / CONSUMÍVEIS
             "Chip": [r"(?<!dual\s)(?<!com\s)chip", "pre-pago", "claro", "vivo", "tim", "oi", "cartao sim", "pré-pago", "smart card", "microchip", "minichip", "nanochip"],
-            "Outros": ["tela de projeção", "projetores", "adaptador", "amplificador de tela", "sumup", "porta-chaves"],
-            "Insumos": ["cola", "resina", "ferramenta", "limpeza", "reparo"]
+            "Outros": ["tela de projeção", "projetores", "adaptador", "amplificador de tela", "sumup", "porta-chaves", "placa dock de carga", "flex power", "flex volume",
+                "dock de carga", "placa flex", "reparo de tela", "botão", "botões", "gatilho", "mola", "analógico", "escova principal", "aspirador", "robo de limpeza", "pelúcia"],
+            "Insumos": ["cola", "resina", "ferramenta", "limpeza", "espatulas", "pá"]
     }
     
     categorias_es = {
         "Proteção": ["capa", "capinha", "funda", "película", "vidrio templado", "case"],
         "Carregador": ["cargador", "fuente", "adaptador", "power bank"],
-        "Acessório": ["estación", "soporte", "dock", "hub", "base", "adaptador", "braçadeira"],
+        "Acessório": ["estación", "soporte", "hub", "base", "adaptador", "braçadeira"],
         "Console": ["ps5", "playstation", "xbox", "nintendo switch"],
         "Smartphone": ["smartphone", "celular", "móvil"],
         "Smartwatch": ["smartwatch", "reloj inteligente", "galaxy watch", "apple watch"],

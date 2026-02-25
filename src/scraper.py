@@ -155,7 +155,7 @@ class MagaluScraper:
                         time.sleep(1)
                         
                         checkbox = filtro_pai.find_element(By.CSS_SELECTOR, "input[data-testid='checkbox-item']")
-                        logging.info("🖱️  Marcando o filtro 'Smartphone' pela primeira vez...")
+                        logging.info(f"🖱️  Marcando o filtro {categoria_alvo} pela primeira vez...")
                         checkbox.click()
                         
                         filtro_aplicado = True
