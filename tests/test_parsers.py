@@ -1,4 +1,4 @@
-from src.parsers import limpar_valor_simples_para_float, normalizar_texto, detectar_bundle, categorizar_produto, montar_string_bundle
+from src.parsers import limpar_valor_simples_para_float, normalizar_texto, detectar_bundle, categorizar_produto, montar_string_bundle, capitalizar_categoria
 import pytest
 
 def test_limpar_valor_real_brasileiro():
@@ -353,6 +353,15 @@ def test_match_categorias():
 
     titulo_relogio_digital_esporte_bracelete = "Relógio Digital Esporte Bracelete Masculino Feminino Barato - 01Smart"
     assert categorizar_produto(titulo_relogio_digital_esporte_bracelete.lower(), 35.90) == "Smartwatch"
+
+@pytest.mark.parametrize("texto_entrada, texto_esperado", [
+    ("display lcd para celular", "Display LCD para Celular"),
+    ("cabo usb para smartphone", "Cabo USB para Smartphone"),
+    ("peças e acessórios", "Peças e Acessórios"),
+])
+def test_capitalizar_categoria(texto_entrada, texto_esperado):
+    resultado = capitalizar_categoria(texto_entrada)
+    assert resultado == texto_esperado
 
 def test_detectar_cabo_sem_bundle_extra():
     titulo = "Cabo Carregador Usb Turbo Compativel Para Fone Xiaomi Red Airdots 2 Top - HREBOS"

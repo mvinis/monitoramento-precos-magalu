@@ -257,9 +257,7 @@ def categorizar_produto(titulo, preco):
     ]
 }
 
-    print("ANTES", titulo)
     titulo = corrigir_erros_digitacao(titulo)
-    print("DEPOIS", titulo)
 
     # 1. TRUNCAGEM
     partes = re.split(r'\b(compatível|compativel| p/ (?!idosos?)| para (?!idosos?)| p/(?!idosos?)| p\. (?!idosos?)| p\.(?!idosos?)| para a | para o | e )\b', titulo)
@@ -453,13 +451,22 @@ def calcular_preco_total_parcelado(texto_parcela):
 
 def capitalizar_categoria(texto):
     palavras_minusculas = {"de", "da", "do", "das", "dos", "e", "para"}
+    # 👇 Nova lista VIP de siglas e exceções
+    siglas = {"LCD", "USB", "BGA", "VR", "TV", "FM", "GPS", "NFC", "SOS"}
     
     palavras = texto.split()
     resultado = []
     
     for i, palavra in enumerate(palavras):
-        if palavra.lower() in palavras_minusculas and i != 0:
+        # 1ª Regra: Se a palavra for uma sigla, deixa tudo maiúsculo
+        if palavra.upper() in siglas:
+            resultado.append(palavra.upper())
+            
+        # 2ª Regra: Se for preposição (e não for a 1ª palavra), deixa minúsculo
+        elif palavra.lower() in palavras_minusculas and i != 0:
             resultado.append(palavra.lower())
+            
+        # 3ª Regra: Restante das palavras em Title Case
         else:
             resultado.append(palavra.capitalize())
     
