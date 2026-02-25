@@ -11,7 +11,6 @@ import hashlib
 from src.models.classifier import ProductClassifier
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 # Importação de ferramentas internas
@@ -54,33 +53,6 @@ class MagaluScraper:
         if self.driver:
             self.driver.quit()
     
-    def resolver_cor_da_variacao(self, url_produto):
-        """Entra na URL apenas para identificar a cor ativa e diferenciar o SKU."""
-        try:
-            self.driver.execute_script("window.open('');")
-            self.driver.switch_to.window(self.driver.window_handles[-1])
-            self.driver.get(url_produto)
-            
-            # Espera o tempo do JavaScript preencher o atributo 'value'
-            time.sleep(3.5) 
-            
-            sopa = BeautifulSoup(self.driver.page_source, 'html.parser')
-            container = sopa.find('div', attrs={'type': 'color'})
-            
-            cor_final = "N/A"
-            if container:
-                # Tenta o selecionado (value), se não, o primeiro da lista (values)
-                cor_final = container.get('value') or container.get('values', '').split(',')[0] or "N/A"
-
-            self.driver.close()
-            self.driver.switch_to.window(self.driver.window_handles[0])
-            return cor_final.strip()
-        
-        except Exception:
-            if len(self.driver.window_handles) > 1: self.driver.close()
-            self.driver.switch_to.window(self.driver.window_handles[0])
-            return "N/A"
-
     def extrair_descricao_detalhada(self, url_produto, txt_produto):
         """Abre o produto em uma nova aba, extrai a descrição e fecha a aba."""
         logging.info(f"📡 Extraindo descrição do produto {txt_produto}")
@@ -130,18 +102,52 @@ class MagaluScraper:
             while True:
 
                 # 1. CONSTRUÇÃO DA URL DINÂMICA
-                pasta_filtro = f"entity---{categoria_alvo.lower()}/" if filtro_aplicado else ""
-                url_final = f"{url_base}{pasta_filtro}?page={pagina}"
+                # pasta_filtro = f"entity---{categoria_alvo.lower()}/" if filtro_aplicado else ""
+                # url_final = f"{url_base}{pasta_filtro}?page={pagina}"
+
+                if pagina == 1:
+                    self.driver.get(url_base)
+                else:
+                    # Usa a URL atual já com filtro aplicado
+                    url_atual = self.driver.current_url
+                    if "page=" in url_atual:
+                        url_atual = re.sub(r'page=\d+', f'page={pagina}', url_atual)
+                    else:
+                        url_atual += f"?page={pagina}"
+                    self.driver.get(url_atual)
                 
                 logging.info(f"--- 📡 Acessando {categoria_alvo} | Página {pagina} ---")
-                self.driver.get(url_final)
+                # self.driver.get(url_final)
+                # Remove qualquer overlay fixo (ex: pop-up no rodapé)
+                self.driver.execute_script("""
+                    document.querySelectorAll('div').forEach(el => {
+                        let style = window.getComputedStyle(el);
+                        if (style.position === 'fixed' && style.zIndex > 1000) {
+                            el.remove();
+                        }
+                    });
+                """)
+
                 time.sleep(random.uniform(4, 6))
+
+                sopa = BeautifulSoup(self.driver.page_source, 'html.parser')
 
                 # 2. APLICAÇÃO DO FILTRO (Apenas na Página 1)
                 if pagina == 1 and not filtro_aplicado:
                     try:
+                        # Clicar primeiro em ver todas as opções de filtros
+                        xpath_btn_cat_filtro = f"//div[@data-testid='accordion-multiple-filters' and .//p[text()='Tipo de produto']]//button[@data-testid='filter-action' and text()='Ver todos']"
                         xpath_filtro = f"//li[@data-testid='filter-checkbox'][.//p[text()='{categoria_alvo}']]"
+                
+                        # 1. Espera até 10 segundos para o botão existir e ser clicável
+                        botao = WebDriverWait(self.driver, 10).until(
+                            EC.element_to_be_clickable((By.XPATH, xpath_btn_cat_filtro))
+                        )
                         
+                        # 3. Tenta o clique normal
+                        botao.click()
+                        logging.info("✅ Botão 'Ver todos' clicado com sucesso.")
+
                         filtro_pai = WebDriverWait(self.driver, 12).until(
                             EC.element_to_be_clickable((By.XPATH, xpath_filtro))
                         )
@@ -149,11 +155,12 @@ class MagaluScraper:
                         time.sleep(1)
                         
                         checkbox = filtro_pai.find_element(By.CSS_SELECTOR, "input[data-testid='checkbox-item']")
-                        logging.info("🖱️ Marcando o filtro 'Smartphone' pela primeira vez...")
+                        logging.info(f"🖱️  Marcando o filtro {categoria_alvo} pela primeira vez...")
                         checkbox.click()
                         
                         filtro_aplicado = True
                         time.sleep(5) # Espera o Ajax recarregar
+                        sopa = BeautifulSoup(self.driver.page_source, 'html.parser')
 
                         # --- DETECÇÃO DO LIMITE DE PÁGINAS ---
                         sopa_paginacao = BeautifulSoup(self.driver.page_source, 'html.parser')
@@ -165,12 +172,9 @@ class MagaluScraper:
                                 max_paginas = max(nums)
                                 logging.info(f"🎯 Limite dinâmico: {max_paginas} páginas.")
                         
-                        sopa = BeautifulSoup(self.driver.page_source, 'html.parser')
                     except Exception as e:
-                        logging.error(f"⚠️ Falha ao aplicar filtro: {e}")
+                        logging.error(f"⚠️  Falha ao aplicar filtro: {e}")
                         break
-                else:
-                    sopa = BeautifulSoup(self.driver.page_source, 'html.parser')
 
                 # 3. VALIDAÇÃO (KILL SWITCH)
                 chip = sopa.find('label', attrs={'data-testid': 'chip-label'})
@@ -226,7 +230,7 @@ class MagaluScraper:
                                 canal_venda = "MARKETPLACE"
 
                         product_id = "N/A"
-                        match_p = re.search(r'/p/(\d+)/', link_relativo)
+                        
                         match_p = re.search(r'/p/([^/]+)/', link_relativo)
 
                         if match_p:

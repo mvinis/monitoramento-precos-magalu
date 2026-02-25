@@ -68,6 +68,14 @@ class ProductClassifier:
                     if diferenca < 0.15 and preco_produto <= 100:
                         logging.warning(f"⚖️ Empate Técnico (dif: {diferenca:.4f}). Aplicando Veredito Técnico: Smartband.")
                         return "Smartband"
+            # Proteção forte contra falso Acessório
+            if preco_produto <= 100 and (
+                "smart" in texto_lower or
+                "relógio" in texto_lower or
+                any(m in texto_lower for m in modelos_band)
+            ):
+                logging.warning("📉 Wearable barato detectado. Forçando Smartband.")
+                return "Smartband"
 
             # 4. DECISÃO FINAL
             if melhor_score > 0.40: # Threshold menor pois o funil é restrito

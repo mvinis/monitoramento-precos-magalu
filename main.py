@@ -8,6 +8,7 @@ import logging
 # Importações internas
 from src.scraper import MagaluScraper
 from src.utils import configurar_logs
+from src.parsers import capitalizar_categoria
 
 # 1. Carrega as configurações do ambiente (.env)
 load_dotenv()
@@ -65,9 +66,21 @@ def executar():
     
     # 2. Lista de categorias
     
-    # CATEGORIAS DE FILTROS POSSÍVEIS DENTRO DA MAGALU:  Smartphone, Capa para Celular, Smartwatch, Película para Celular, Carregador para Celular e Tablet, Kit de Capa e Película para Celular, Suporte para Celular, Carregador Portátil, Cabo para Celular, Pulseira para Smartwatch e Smartband, Conector para Celular, Bastão de Selfie, Tripé, Capa para Smartwatch, Kit de Acessórios para Celular, Carregador para Celular, Bateria para Celular, Celular Simples, Película para Smartwatch, Tela para Celular, Fonte de Alimentação, Bolsa para Celular, Fonte de Alimentação para Carregador, Peças e Acessórios para Celulares, Estabilizador para Celular, Smartband, Lente de Câmera para Celular, Kit de Ferramentas para Reparo de Celular, Tampa para Celular, Braçadeira para Celular, Controle para Celular, Óculos de Realidade Virtual para Celular, Cabo USB, Stencil BGA, Kit de Ferramentas, Carregador para Smartwatch, Ampliador de Tela para Celular, Peças e Acessórios para Smartwatch, Alto-falante para Celular, Pingente para Celular, Microscópio para Reparo de Celular, Anel inteligente, Adaptador para Equipamento de Áudio, Câmera para Celular, Bateria para Eletrônicos, Suporte para Smartwatch, Gaveta de Chip para Celular, Rastreador de Veículo, Chip para Celular, Adesivo para Celular, Capa para Tablet, Protetor Ocular para Câmera, Kit de Peças para Reparo de Celular, Placa para Celular, Display LCD para Celular, Tela de Proteção, Lente para Celular, Suporte de Celular para Veículos, Suporte para Tablet, Adaptador para Carregador de Celular
+    # CATEGORIAS DE FILTROS POSSÍVEIS DENTRO DA MAGALU:  Smartphone, Capa para Celular, Smartwatch, Película para Celular, 
+    # Carregador para Celular e Tablet, Kit de Capa e Película para Celular, Suporte para Celular, Carregador Portátil, Cabo para Celular, 
+    # Pulseira para Smartwatch e Smartband, Conector para Celular, Bastão de Selfie, Tripé, Capa para Smartwatch, Kit de Acessórios para Celular, 
+    # Carregador para Celular, Bateria para Celular, Celular Simples, Película para Smartwatch, Tela para Celular, Fonte de Alimentação, 
+    # Bolsa para Celular, Fonte de Alimentação para Carregador, Peças e Acessórios para Celulares, Estabilizador para Celular, Smartband, 
+    # Lente de Câmera para Celular, Kit de Ferramentas para Reparo de Celular, Tampa para Celular, Braçadeira para Celular, Controle para Celular, 
+    # Óculos de Realidade Virtual para Celular, Cabo USB, Stencil BGA, Kit de Ferramentas, Carregador para Smartwatch, 
+    # Ampliador de Tela para Celular, Peças e Acessórios para Smartwatch, Alto-falante para Celular, Pingente para Celular, 
+    # Microscópio para Reparo de Celular, Anel inteligente, Adaptador para Equipamento de Áudio, Câmera para Celular, Bateria para Eletrônicos, 
+    # Suporte para Smartwatch, Gaveta de Chip para Celular, Rastreador de Veículo, Chip para Celular, Adesivo para Celular, Capa para Tablet, 
+    # Protetor Ocular para Câmera, Kit de Peças para Reparo de Celular, Placa para Celular, Display LCD para Celular, Tela de Proteção, 
+    # Lente para Celular, Suporte de Celular para Veículos, Suporte para Tablet, Adaptador para Carregador de Celular
 
-    categorias_alvo = ["Smartwatch", "Smartband"] # padrão: Smartwatch, Smartband
+    categorias_alvo = ["Smartband", "Smartwatch", "Smartphone", "Celular Simples", "Carregador para Celular"] # padrão: Smartwatch, Smartband, Celular simples, Carregador Portátil
+    categorias_alvo = [capitalizar_categoria(item) for item in categorias_alvo]
 
     todas_coletas = []
 
