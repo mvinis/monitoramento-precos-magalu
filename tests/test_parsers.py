@@ -1,4 +1,4 @@
-from src.parsers import limpar_valor_simples_para_float, normalizar_texto, detectar_bundle, categorizar_produto, montar_string_bundle
+from src.parsers import limpar_valor_simples_para_float, normalizar_texto, detectar_bundle, categorizar_produto, montar_string_bundle, capitalizar_categoria
 import pytest
 
 def test_limpar_valor_real_brasileiro():
@@ -353,6 +353,30 @@ def test_match_categorias():
 
     titulo_relogio_digital_esporte_bracelete = "Relógio Digital Esporte Bracelete Masculino Feminino Barato - 01Smart"
     assert categorizar_produto(titulo_relogio_digital_esporte_bracelete.lower(), 35.90) == "Smartwatch"
+
+    titulo_lente_microscopio = "Lente de microscópio de telefone APEXEL PhoneMicro 5 Series 150X Android/iPhone"
+    assert categorizar_produto(titulo_lente_microscopio.lower(), 426) == "Outros"
+
+    titulo_lente_profissional = "Lente Profissional Telescópica Celular Zoom 6x +Macro Luneta - BBACOMERCIO"
+    assert categorizar_produto(titulo_lente_profissional.lower(), 469) == "Outros"
+
+    titulo_lente_foco_suporte = "Lente foco suporte lente cabeça corte laser d30 - f155 bt240 - RAYTOOLS"
+    assert categorizar_produto(titulo_lente_foco_suporte.lower(), 2940) == "Outros"
+
+    titulo_lente_teleobjetiva = "Lente Teleobjetiva Zoom Óptico 22x Para Celular com Tripé - BBACOMERCIO"
+    assert categorizar_produto(titulo_lente_teleobjetiva.lower(), 215) == "Outros"
+   
+    titulo_microscopio_binocular = "Microscópio Binocular Composto 40X-5000X Com Câmera USB LED Dupla, Suporte Para Celular E Kit De - sino optical"
+    assert categorizar_produto(titulo_microscopio_binocular.lower(), 734) == "Outros"
+
+@pytest.mark.parametrize("texto_entrada, texto_esperado", [
+    ("display lcd para celular", "Display LCD para Celular"),
+    ("cabo usb para smartphone", "Cabo USB para Smartphone"),
+    ("peças e acessórios", "Peças e Acessórios"),
+])
+def test_capitalizar_categoria(texto_entrada, texto_esperado):
+    resultado = capitalizar_categoria(texto_entrada)
+    assert resultado == texto_esperado
 
 def test_detectar_cabo_sem_bundle_extra():
     titulo = "Cabo Carregador Usb Turbo Compativel Para Fone Xiaomi Red Airdots 2 Top - HREBOS"
