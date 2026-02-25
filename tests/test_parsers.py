@@ -354,6 +354,21 @@ def test_match_categorias():
     titulo_relogio_digital_esporte_bracelete = "Relógio Digital Esporte Bracelete Masculino Feminino Barato - 01Smart"
     assert categorizar_produto(titulo_relogio_digital_esporte_bracelete.lower(), 35.90) == "Smartwatch"
 
+    titulo_lente_microscopio = "Lente de microscópio de telefone APEXEL PhoneMicro 5 Series 150X Android/iPhone"
+    assert categorizar_produto(titulo_lente_microscopio.lower(), 426) == "Outros"
+
+    titulo_lente_profissional = "Lente Profissional Telescópica Celular Zoom 6x +Macro Luneta - BBACOMERCIO"
+    assert categorizar_produto(titulo_lente_profissional.lower(), 469) == "Outros"
+
+    titulo_lente_foco_suporte = "Lente foco suporte lente cabeça corte laser d30 - f155 bt240 - RAYTOOLS"
+    assert categorizar_produto(titulo_lente_foco_suporte.lower(), 2940) == "Outros"
+
+    titulo_lente_teleobjetiva = "Lente Teleobjetiva Zoom Óptico 22x Para Celular com Tripé - BBACOMERCIO"
+    assert categorizar_produto(titulo_lente_teleobjetiva.lower(), 215) == "Outros"
+   
+    titulo_microscopio_binocular = "Microscópio Binocular Composto 40X-5000X Com Câmera USB LED Dupla, Suporte Para Celular E Kit De - sino optical"
+    assert categorizar_produto(titulo_microscopio_binocular.lower(), 734) == "Outros"
+
 @pytest.mark.parametrize("texto_entrada, texto_esperado", [
     ("display lcd para celular", "Display LCD para Celular"),
     ("cabo usb para smartphone", "Cabo USB para Smartphone"),

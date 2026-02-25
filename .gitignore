@@ -8,6 +8,8 @@ env/
 # Ignora o conteúdo de data, mas mantém a estrutura
 data/raw/json/*.json
 data/raw/xlsx/*.xlsx
+data/raw/json/exceptions/*.json
+data/raw/json/payloads/*.json
 data/processed/*.json
 data/processed/*.xlsx
 *.log

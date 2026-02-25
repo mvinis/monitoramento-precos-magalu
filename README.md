@@ -166,7 +166,11 @@ classDiagram
 ## 📁 Estrutura do Projeto
 
 ```text
-├── data/raw/             # Arquivos JSON brutos coletados
+├── data/raw/
+│   ├── json/
+│   │    ├── exceptions   # Categorias que não foram devidamente filtradas
+│   │    └── payloads     # Categorias bem sucedidas pronta para uso
+│   └── xlsx              # Planilha para auditoria dos produtos capturados
 ├── src/
 │   ├── models/
 │   │   └── classifier.py # Lógica de IA (NLP) para categorias
@@ -175,7 +179,7 @@ classDiagram
 │   └── utils.py          # Ferramentas auxiliares (logs, timestamps)
 ├── tests/                # Suíte de testes automatizados
 │   ├── test_ai_logic.py  # Validação de inferência e categorias feita pela IA
-│   └── test_parsers.py   # Validação de saneamento e regex
+│   └── test_parsers.py   # Validação de saneamento, regex e de funções do parsers.py
 ├── .env                  # Variáveis de ambiente (não versionado)
 ├── .gitignore            # Proteção de arquivos sensíveis
 ├── main.py               # Ponto de entrada da aplicação

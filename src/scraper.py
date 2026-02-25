@@ -29,7 +29,7 @@ class MagaluScraper:
 
         # Configura a instância do Selenium com argumentos para evitar bloqueios.
         self.chrome_options = Options()
-        self.chrome_options.add_argument("--headless")
+        # self.chrome_options.add_argument("--headless")
         self.chrome_options.add_argument("--incognito") # modo anônimo
         self.chrome_options.add_argument("--window-size=1920,1080")
         
@@ -156,10 +156,24 @@ class MagaluScraper:
                         
                         checkbox = filtro_pai.find_element(By.CSS_SELECTOR, "input[data-testid='checkbox-item']")
                         logging.info(f"🖱️  Marcando o filtro {categoria_alvo} pela primeira vez...")
+                        # checkbox.click()
+                        
+                        # filtro_aplicado = True
+                        # time.sleep(5) # Espera o Ajax recarregar
+
                         checkbox.click()
                         
                         filtro_aplicado = True
-                        time.sleep(5) # Espera o Ajax recarregar
+                        
+                        logging.info(f"⏳ Aguardando renderização do filtro: {categoria_alvo}...")
+                        try:
+                            WebDriverWait(self.driver, 15).until(
+                                EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='chip-label']"))
+                            )
+                            time.sleep(1.5)
+                        except Exception as e:
+                            logging.warning("⚠️ Demora incomum na Magalu. O chip pode não ter renderizado a tempo.")
+
                         sopa = BeautifulSoup(self.driver.page_source, 'html.parser')
 
                         # --- DETECÇÃO DO LIMITE DE PÁGINAS ---
@@ -175,15 +189,28 @@ class MagaluScraper:
                     except Exception as e:
                         logging.error(f"⚠️  Falha ao aplicar filtro: {e}")
                         break
+             
+                time.sleep(random.uniform(4, 6))
+               # 3. VALIDAÇÃO (KILL SWITCH) - Validação Flexível Multi-Chips (Confinada)
+                if filtro_aplicado:
+                    container_filtros_ativos = sopa.find('div', attrs={'data-testid': 'filters-selected-container'})
+                    
+                    area_de_busca = container_filtros_ativos if container_filtros_ativos else sopa
+                    
+                    chips = area_de_busca.find_all(attrs={'data-testid': 'chip-label'})
+                    # chips = sopa.find('div', attrs={'data-testid': 'filters-selected-container'})
+                    # f"//label[@data-testid='chip-label'][.//p[text()='Adaptador para Carregador de Celular']]" # isso aqui tem q estar no chips
 
-                # 3. VALIDAÇÃO (KILL SWITCH)
-                chip = sopa.find('label', attrs={'data-testid': 'chip-label'})
-                texto_chip = chip.find('p').get_text().strip() if chip else ""
-                
-                # Comparação da categoria_alvo
-                if filtro_aplicado and texto_chip != categoria_alvo:
-                    logging.warning(f"🚨 Filtro de {categoria_alvo} caiu! Encerrando na pág {pagina}.")
-                    break
+                    chip = self.driver.find_elements(
+                        By.XPATH,
+                        f"//label[@data-testid='chip-label'][.//p[text()='{categoria_alvo}']]"
+                    )
+
+                    tem_chip_adaptador = len(chip) > 0
+                    
+                    if not tem_chip_adaptador:
+                        logging.warning(f"🚨 Filtro caiu! Alvo: '{categoria_alvo}' | Encerrando pág {pagina}.")
+                        break
 
                 # 4. PROCESSAMENTO DOS CARDS
                 cards = sopa.find_all(['a'], attrs={'data-testid': 'product-card-container'})

@@ -16,7 +16,7 @@ def montar_objeto_produto(dados_brutos, contexto, classificador_ai=None):
     titulo_low = titulo_raw.lower()
     is_bundle_final = detectar_bundle(titulo_raw)
 
-    logging.info(f"--- Processando: {titulo_raw[:50]}... ---")
+    logging.info(f"--- Processando: {titulo_raw[:50]} | página {contexto['pagina']}... ---")
    
     categoria_base = categorizar_produto(titulo_low, p_credito_avista)
 
@@ -587,7 +587,8 @@ def get_categorias_multilingue():
             # 4. OUTROS / CONSUMÍVEIS
             "Chip": [r"(?<!dual\s)(?<!com\s)chip", "pre-pago", "claro", "vivo", "tim", "oi", "cartao sim", "pré-pago", "smart card", "microchip", "minichip", "nanochip"],
             "Outros": ["tela de projeção", "projetores", "adaptador", "amplificador de tela", "sumup", "porta-chaves", "placa dock de carga", "flex power", "flex volume",
-                "dock de carga", "placa flex", "reparo de tela", "botão", "botões", "gatilho", "mola", "analógico", "escova principal", "aspirador", "robo de limpeza", "pelúcia"],
+                "dock de carga", "placa flex", "reparo de tela", "botão", "botões", "gatilho", "mola", "analógico", "escova principal", "aspirador", "robo de limpeza", "pelúcia", 
+                "lente de microscópio", "lente profissional telescópica", "lente foco", "lente teleobjetiva", "microscópio binocular"],
             "Insumos": ["cola", "resina", "ferramenta", "limpeza", "espatulas", "pá"]
     }
     
