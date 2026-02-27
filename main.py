@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime
+from time import time
 from dotenv import load_dotenv
 import pandas as pd
 import logging
@@ -104,7 +105,7 @@ def executar():
         # "Carregador para Celular e Tablet",
         # "Carregador para Smartwatch",
         # "Carregador Portátil",
-        "Celular Simples",
+        # "Celular Simples",
         # "Chip para Celular",
         # "Conector para Celular",
         # "Controle para Celular",
@@ -131,9 +132,9 @@ def executar():
         # "Protetor Ocular para Câmera",
         # "Pulseira para Smartwatch e Smartband",
         # "Rastreador de Veículo",
-        "Smartband",
-        "Smartphone",
-        "Smartwatch",
+        # "Smartband",
+        # "Smartphone",
+        # "Smartwatch",
         # "Stencil BGA",
         # "Suporte de Celular para Veículos",
         # "Suporte para Celular",
@@ -154,16 +155,26 @@ def executar():
 
     # 3. Loop para percorrer cada categoria
     for categoria in categorias_alvo:
-        logging.info(f"🔍 Iniciando coleta da categoria: {categoria}")
-        
-        resultados_categoria = bot.coletar_produtos(categoria_alvo=categoria)
-        
-        if resultados_categoria:
-            logging.info(f"✅ Coletados {len(resultados_categoria)} itens de {categoria}")
-            todas_coletas.extend(resultados_categoria)
-        else:
-            logging.warning(f"⚠  Nenhuma oferta encontrada para {categoria}")
-            categorias_vazias.append(categoria)
+        tentativas = 0
+        max_tentativas = 2
+        sucesso = False
+
+        while tentativas < max_tentativas and not sucesso:
+            tentativas += 1
+            if tentativas > 1:
+                logging.info(f"🔄 Segunda tentativa para: {categoria}...")
+                time.sleep(5)
+
+            resultados_categoria = bot.coletar_produtos(categoria_alvo=categoria)
+
+            if resultados_categoria:
+                logging.info(f"✅ Coletados {len(resultados_categoria)} itens de {categoria}")
+                todas_coletas.extend(resultados_categoria)
+                sucesso = True
+            else:
+                if tentativas == max_tentativas:
+                    logging.error(f"⚠  Falha definitiva para {categoria} após {max_tentativas} tentativas.")
+                    categorias_vazias.append(categoria)
 
     # 4. Salva o resultado consolidado
     if todas_coletas:
